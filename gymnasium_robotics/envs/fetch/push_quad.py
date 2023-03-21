@@ -5,7 +5,7 @@ import numpy as np
 from gymnasium import spaces
 from gymnasium.utils.ezpickle import EzPickle
 
-from gymnasium_robotics.envs.fetch import MujocoFetchEnv
+from gymnasium_robotics.envs.fetch import MujocoFetchEnv, goal_distance
 
 # Ensure we get the path separator correct on windows
 MODEL_XML_PATH = os.path.join("fetch", "push_quad.xml")
@@ -141,6 +141,7 @@ class MujocoFetchPushQuadHardEnv(MujocoFetchEnv, EzPickle):
             "object0:joint": [1.25, 0.53, 0.4, 1.0, 0.0, 0.0, 0.0],
         }
         self.camera_names = camera_names
+        self.prev_goal_dist = None
         MujocoFetchEnv.__init__(
             self,
             model_path=MODEL_XML_PATH,
@@ -255,12 +256,21 @@ class MujocoFetchPushQuadHardEnv(MujocoFetchEnv, EzPickle):
         terminated = self.compute_terminated(obj0_pos, self.goal, info)
         truncated = self.compute_truncated(obj0_pos, self.goal, info)
 
-        reward = self.compute_reward(obj0_pos, self.goal, info)
+        curr_goal_dist = goal_distance(obj0_pos, self.goal)
+        reward = self.compute_reward(curr_goal_dist, self.prev_goal_dist, info)
+
         if info["is_success"] and self.goal_idx < len(self.goals) - 1:
             self.goal_idx += 1
             self.goal = self.goals[self.goal_idx]
 
+        self.prev_goal_dist = goal_distance(obj0_pos, self.goal)
+
         return obs, reward, terminated, truncated, info
+    
+    def compute_reward(self, curr_goal_dist, prev_goal_dist, info):
+        # we want prev_goal_dist > curr_goal_dist.
+        reward = self.prev_goal_dist - curr_goal_dist
+        return reward
 
     def reset(
         self,
@@ -277,5 +287,7 @@ class MujocoFetchPushQuadHardEnv(MujocoFetchEnv, EzPickle):
         obs = self._get_obs()
         if self.render_mode == "human":
             self.render()
-
+        # initialize block distance
+        obj0_pos = self._utils.get_site_xpos(self.model, self.data, "object0")
+        self.prev_goal_dist = goal_distance(obj0_pos, self.goal)
         return obs, {}

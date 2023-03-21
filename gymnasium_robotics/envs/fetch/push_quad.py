@@ -299,4 +299,16 @@ class MujocoFetchPushQuadHardEnv(MujocoFetchEnv, EzPickle):
             rgb image (np.ndarray): if render_mode is "rgb_array", return a 3D image array.
         """
         self._render_callback()
-        return self.mujoco_renderer.render(self.render_mode, camera_name="camera_under")
+        img = self.mujoco_renderer.render(self.render_mode, camera_name="camera_under")
+        if np.sum(img) == 0:
+            import ipdb; ipdb.set_trace()
+        return img
+
+    def close(self):
+        """Close contains the code necessary to "clean up" the environment.
+
+        Terminates any existing WindowViewer instances in the Gymnaisum MujocoRenderer.
+        """
+        pass
+        # if self.mujoco_renderer is not None:
+        #     self.mujoco_renderer.close()

@@ -167,7 +167,7 @@ class MujocoFetchPushQuadHardEnv(MujocoFetchEnv, EzPickle):
                     0, 255, shape=(self.height, self.width, 3), dtype="uint8"
                 )
         self.observation_space = spaces.Dict(_obs_space)
-        EzPickle.__init__(self, camera_names=camera_names, image_size=32, reward_type=reward_type, **kwargs)
+        EzPickle.__init__(self, camera_names=camera_names, reward_type=reward_type, action_space_type=action_space_type, **kwargs)
         
         self.goal_idx = 0
         q1_goal = np.array([1.1, 0.95, 0.42])
@@ -291,3 +291,12 @@ class MujocoFetchPushQuadHardEnv(MujocoFetchEnv, EzPickle):
         obj0_pos = self._utils.get_site_xpos(self.model, self.data, "object0")
         self.prev_goal_dist = goal_distance(obj0_pos, self.goal)
         return obs, {}
+
+    def render(self):
+        """Render a frame of the MuJoCo simulation.
+
+        Returns:
+            rgb image (np.ndarray): if render_mode is "rgb_array", return a 3D image array.
+        """
+        self._render_callback()
+        return self.mujoco_renderer.render(self.render_mode, camera_name="camera_under")

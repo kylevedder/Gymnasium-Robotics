@@ -132,7 +132,7 @@ class MujocoFetchPushQuadEnv(MujocoFetchEnv, EzPickle):
         return obs, {}
 
 # push into all four quadrants
-class MujocoFetchPushHardQuadEnv(MujocoFetchEnv, EzPickle):
+class MujocoFetchPushQuadHardEnv(MujocoFetchEnv, EzPickle):
     def __init__(self, camera_names=None, reward_type="sparse", action_space_type="object", **kwargs):
         initial_qpos = {
             "robot0:slide0": 0.405,

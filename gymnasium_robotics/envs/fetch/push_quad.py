@@ -160,7 +160,7 @@ class MujocoFetchPushQuadHardEnv(MujocoFetchEnv, EzPickle):
         )
         self.action_space_type = action_space_type
         # consists of images and proprioception.
-        _obs_space = {}
+        _obs_space = {"robot": spaces.Box(low=float("-inf"), high=float("inf"), shape=(6,))}
         if isinstance(camera_names, list) and len(camera_names) > 0:
             for c in camera_names:
                 _obs_space[c] = spaces.Box(
@@ -205,6 +205,15 @@ class MujocoFetchPushQuadHardEnv(MujocoFetchEnv, EzPickle):
 
     def _get_obs(self):
         obs = {}
+        # positions
+        grip_pos = self._utils.get_site_xpos(self.model, self.data, "robot0:grip")
+
+        dt = self.n_substeps * self.model.opt.timestep
+        grip_velp = (
+            self._utils.get_site_xvelp(self.model, self.data, "robot0:grip") * dt
+        )
+        obs["robot"] = np.concatenate([grip_pos, grip_velp], dtype=np.float32)
+
         if hasattr(self, "mujoco_renderer"):
             self._render_callback()
             for c in self.camera_names:

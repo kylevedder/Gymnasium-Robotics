@@ -94,7 +94,7 @@ def register_robotics_envs():
             id=f"FetchPushQuadHard-v0",
             entry_point="gymnasium_robotics.envs.fetch.push_quad:MujocoFetchPushQuadHardEnv",
             kwargs={
-                "camera_names": ["camera_q1", "camera_q2", "camera_q3", "camera_q4","camera_overhead", "camera_under"],
+                "camera_names": ["camera_q1", "camera_q2", "camera_q3", "camera_q4","camera_overhead", "gripper_camera_rgb", "camera_under"],
                 "reward_type": "dense",
                 "action_space_type": "robot",
                 "render_mode": "rgb_array",

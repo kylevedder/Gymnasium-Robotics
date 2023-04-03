@@ -104,6 +104,20 @@ def register_robotics_envs():
             max_episode_steps=50,
         )
 
+        register(
+            id=f"FetchPushQuadHardPO-v0",
+            entry_point="gymnasium_robotics.envs.fetch.push_quad:MujocoFetchPushQuadHardEnv",
+            kwargs={
+                "camera_names": ["camera_overhead", "gripper_camera_rgb"],
+                "reward_type": "dense",
+                "action_space_type": "robot",
+                "render_mode": "rgb_array",
+                "width": 32,
+                "height": 32,
+            },
+            max_episode_steps=50,
+        )
+
         # Hand
         register(
             id=f"HandReach{suffix}-v0",

@@ -265,14 +265,21 @@ class MujocoFetchPushQuadHardEnv(MujocoFetchEnv, EzPickle):
         terminated = self.compute_terminated(obj0_pos, self.goal, info)
         truncated = self.compute_truncated(obj0_pos, self.goal, info)
 
-        curr_goal_dist = goal_distance(obj0_pos, self.goal)
-        reward = self.compute_reward(curr_goal_dist, self.prev_goal_dist, info)
+        if self.reward_type == "dense":
+            curr_goal_dist = goal_distance(obj0_pos, self.goal)
+            reward = self.compute_reward(curr_goal_dist, self.prev_goal_dist, info)
 
-        if info["is_success"] and self.goal_idx < len(self.goals) - 1:
-            self.goal_idx += 1
-            self.goal = self.goals[self.goal_idx]
+            if info["is_success"] and self.goal_idx < len(self.goals) - 1:
+                self.goal_idx += 1
+                self.goal = self.goals[self.goal_idx]
 
-        self.prev_goal_dist = goal_distance(obj0_pos, self.goal)
+            self.prev_goal_dist = goal_distance(obj0_pos, self.goal)
+        else:
+            curr_goal_dist = goal_distance(obj0_pos, self.goal)
+            reward = 1.0 * (curr_goal_dist < 0.05) 
+            if info["is_success"] and self.goal_idx < len(self.goals) - 1:
+                self.goal_idx += 1
+                self.goal = self.goals[self.goal_idx]
 
         return obs, reward, terminated, truncated, info
     

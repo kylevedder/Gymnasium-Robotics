@@ -856,5 +856,10 @@ class VisualPointMazeEnv(MazeEnv, EzPickle):
             return self.point_env.mujoco_renderer.render(self.render_mode, None, "ego_cam")
 
     def close(self):
-        super().close()
-        self.point_env.close()
+        """Close contains the code necessary to "clean up" the environment.
+
+        Terminates any existing WindowViewer instances in the Gymnaisum MujocoRenderer.
+        """
+        pass
+        # if self.mujoco_renderer is not None:
+        #     self.mujoco_renderer.close()

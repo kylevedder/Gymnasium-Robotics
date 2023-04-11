@@ -275,8 +275,16 @@ class MujocoFetchPushQuadHardEnv(MujocoFetchEnv, EzPickle):
 
             self.prev_goal_dist = goal_distance(obj0_pos, self.goal)
         else:
-            curr_goal_dist = goal_distance(obj0_pos, self.goal)
-            reward = 1.0 * (curr_goal_dist < 0.05) 
+            if self.action_space_type == "object":
+                curr_goal_dist = goal_distance(obj0_pos, self.goal)
+                reward = 1.0 * (curr_goal_dist < 0.05) 
+            else:
+                curr_goal_dist = goal_distance(obj0_pos, self.goal)
+                grip_pos = self._utils.get_site_xpos(self.model, self.data, "robot0:grip")
+                # keep gripper somewhat close to the object.
+                curr_grip_dist = goal_distance(grip_pos, obj0_pos)
+                reward = 1.0 * (curr_goal_dist < 0.05) - 0.01 * curr_grip_dist
+
             if info["is_success"] and self.goal_idx < len(self.goals) - 1:
                 self.goal_idx += 1
                 self.goal = self.goals[self.goal_idx]

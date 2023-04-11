@@ -14,7 +14,7 @@ import math
 import tempfile
 import xml.etree.ElementTree as ET
 from os import path
-from typing import Dict, List, Optional, Union
+from typing import Callable, Dict, List, Optional, Union
 
 import numpy as np
 
@@ -147,6 +147,7 @@ class Maze:
         maze_map: list,
         maze_size_scaling: float,
         maze_height: float,
+        maze_fns: list=None,
     ):
         """Class method that returns an instance of Maze with a decoded maze information and the temporal
            path to the new MJCF (xml) file for the MuJoCo simulation.
@@ -175,11 +176,16 @@ class Maze:
                 y = maze.y_map_center - (i + 0.5) * maze_size_scaling
                 if struct == 1:  # Unmovable block.
                     # Offset all coordinates so that maze is centered.
-                    ET.SubElement(
+                    geom_body = ET.SubElement(
                         worldbody,
+                        "body",
+                        name=f"block_{i}_{j}_body",
+                        pos=f"{x} {y} {maze_height / 2 * maze_size_scaling}",
+                    )
+                    ET.SubElement(
+                        geom_body,
                         "geom",
                         name=f"block_{i}_{j}",
-                        pos=f"{x} {y} {maze_height / 2 * maze_size_scaling}",
                         size=f"{0.5 * maze_size_scaling} {0.5 * maze_size_scaling} {maze_height / 2 * maze_size_scaling}",
                         type="box",
                         material="",
@@ -207,6 +213,9 @@ class Maze:
             rgba="1 0 0 0.7",
             type="sphere",
         )
+        if maze_fns is not None:
+            for fn in maze_fns:
+                fn(tree, maze_size_scaling)
 
         # Add the combined cell locations (goal/reset) to goal and reset
         if (
@@ -223,10 +232,25 @@ class Maze:
         # Save new xml with maze to a temporary file
         with tempfile.TemporaryDirectory() as tmp_dir:
             temp_xml_path = path.join(path.dirname(tmp_dir), "ant_maze.xml")
+            # make indents: https://stackoverflow.com/questions/3095434/inserting-newlines-in-xml-file-generated-via-xml-etree-elementtree-in-python
+            def indent(elem, level=0):
+                i = "\n" + level*"  "
+                if len(elem):
+                    if not elem.text or not elem.text.strip():
+                        elem.text = i + "  "
+                    if not elem.tail or not elem.tail.strip():
+                        elem.tail = i
+                    for elem in elem:
+                        indent(elem, level+1)
+                    if not elem.tail or not elem.tail.strip():
+                        elem.tail = i
+                else:
+                    if level and (not elem.tail or not elem.tail.strip()):
+                        elem.tail = i
+            indent(tree.getroot())
             tree.write(temp_xml_path)
 
         return maze, temp_xml_path
-
 
 class MazeEnv(GoalEnv):
     def __init__(
@@ -238,13 +262,14 @@ class MazeEnv(GoalEnv):
         maze_size_scaling: float = 1.0,
         maze_height: float = 0.5,
         position_noise_range: float = 0.25,
+        maze_fns: List[Callable] = None,
         **kwargs,
     ):
 
         self.reward_type = reward_type
         self.continuing_task = continuing_task
         self.maze, self.tmp_xml_file_path = Maze.make_maze(
-            agent_xml_path, maze_map, maze_size_scaling, maze_height
+            agent_xml_path, maze_map, maze_size_scaling, maze_height, maze_fns,
         )
 
         self.position_noise_range = position_noise_range

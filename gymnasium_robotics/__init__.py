@@ -1022,6 +1022,74 @@ def register_robotics_envs():
         )
 
         # ----- PointMaze -----
+        def add_cameras(tree, maze_size_scaling):
+            import xml.etree.ElementTree as ET
+            # Add cameras.
+            cam_body = tree.find(".//worldbody/body")
+            worldbody = tree.find(".//worldbody")
+            assert cam_body is not None and cam_body.get('name') in {'particle'}
+
+            M = maze_size_scaling
+            ET.SubElement(
+                cam_body, 
+                "camera",
+                name="ego_cam",
+                mode="track",
+                pos="0 0 1.8",
+            )
+            quadrant_cam_config = [
+                {'pos': f'0 {-1.25*M} {4.25*M}', 'mode': 'fixed', 'euler': '0 0 0', 'fovy': '60'},
+                {'pos': f'{1.25*M} 0 {5.25*M}', 'mode': 'fixed', 'euler': '0 0 0', 'fovy': '60'},
+                {'pos': f'0 {1.25 * M} {2.25*M}', 'mode': 'fixed', 'euler': '0 0 0', 'fovy': '60'} # top hallway,
+            ]        
+            for i, config in enumerate(quadrant_cam_config):
+                cam_body = ET.SubElement(
+                    worldbody,
+                    "body",
+                    name=f"q{i}_cam_body",
+                )
+                ET.SubElement(
+                    cam_body, 
+                    "site",
+                    name=f"q{i}_cam_site",
+                    rgba="0 1.0 0 1.0",
+                    size="0.05",
+                    pos=config['pos'],
+                )
+                ET.SubElement(
+                    cam_body, 
+                    "camera",
+                    name=f"q{i}_cam",
+                    **config,
+                )
+            # Add curtains.
+            curtain_config = [
+                {'pos': f'{0.5*M} 0 0', 'rgba': '0 0 0 1', 'type': 'box', 'size': f'0.05 {10/4 * M} 10'},
+                {'pos': f'{-0.5*M} {0.5*M} 0', 'rgba': '0 0 0 1', 'type': 'box', 'size': f'{4/4 * M} 0.05 10'}
+            ]
+            for i, config in enumerate(curtain_config):
+                ET.SubElement(
+                    worldbody, 
+                    "site",
+                    name=f"curtain_{i}",
+                    **config
+                )
+
+        register(
+            id=f"VisualPointMaze_UMaze{suffix}-v3",
+            entry_point="gymnasium_robotics.envs.maze.point_maze:VisualPointMazeEnv",
+            disable_env_checker=True,
+            kwargs={
+                "maze_map": maps.VISUAL_U_MAZE,
+                "maze_size_scaling": 1.0,
+                "render_mode": "rgb_array",
+                "camera_names": ["ego_cam", "q0_cam", "q1_cam", "q2_cam"],
+                "width": 32,
+                "height": 32,
+                "maze_fns": [add_cameras],
+            },
+            max_episode_steps=150,
+        )
 
         register(
             id=f"PointMaze_UMaze{suffix}-v3",

@@ -849,7 +849,11 @@ class VisualPointMazeEnv(MazeEnv, EzPickle):
         return obs
 
     def render(self):
-        return self.point_env.render()
+        # return self.point_env.render()
+        if self.render_mode == "human":
+            return self.point_env.render()
+        else:
+            return self.point_env.mujoco_renderer.render(self.render_mode, None, "ego_cam")
 
     def close(self):
         super().close()

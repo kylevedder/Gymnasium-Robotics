@@ -731,7 +731,7 @@ class VisualPointMazeEnv(MazeEnv, EzPickle):
         self.action_space = self.point_env.action_space
         self.width = self.point_env.width
         self.height = self.point_env.height
-        _obs_space = {}
+        _obs_space = {"robot": spaces.Box(-np.inf, np.inf, shape=(5,), dtype="float32")}
         if isinstance(camera_names, list) and len(camera_names) > 0:
             for c in camera_names:
                 _obs_space[c] = spaces.Box(
@@ -759,6 +759,8 @@ class VisualPointMazeEnv(MazeEnv, EzPickle):
         seed: Optional[int] = None,
         options: Optional[Dict[str, Optional[np.ndarray]]] = None,
     ):
+        # timestep
+        self.timestep = 0
         if options is None:
             goal = self.generate_target_goal()
             # Add noise to goal position
@@ -816,6 +818,8 @@ class VisualPointMazeEnv(MazeEnv, EzPickle):
         return obs_dict, info
 
     def step(self, action):
+        # timestep
+        self.timestep += 1
         obs, _, _, _, info = self.point_env.step(action)
         obs_dict = self._get_obs(obs)
 
@@ -835,7 +839,7 @@ class VisualPointMazeEnv(MazeEnv, EzPickle):
         )
 
     def _get_obs(self, point_obs) -> Dict[str, np.ndarray]:
-        obs = {}
+        obs = {"robot": np.concatenate([point_obs, [self.timestep]])}
         if hasattr(self.point_env, "mujoco_renderer"):
             for c in self.camera_names:
                 img = self.point_env.mujoco_renderer.render(self.render_mode, camera_name=c)

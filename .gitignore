@@ -4,6 +4,8 @@
 .DS_Store
 .cache
 .pytest_cache/
+videos/
+test.mp4
 
 # Setuptools distribution and build folders.
 /dist/

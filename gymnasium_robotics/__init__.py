@@ -117,6 +117,19 @@ def register_robotics_envs():
             },
             max_episode_steps=50,
         )
+        register(
+            id=f"FetchPushQuadSparseHard-v0",
+            entry_point="gymnasium_robotics.envs.fetch.push_quad:MujocoFetchPushQuadHardEnv",
+            kwargs={
+                "camera_names": ["camera_q1", "camera_q2", "camera_q3", "camera_q4","camera_overhead", "gripper_camera_rgb", "camera_under"],
+                "reward_type": "sparse",
+                "action_space_type": "robot",
+                "render_mode": "rgb_array",
+                "width": 32,
+                "height": 32,
+            },
+            max_episode_steps=50,
+        )
 
         register(
             id=f"FetchPushQuadHardPO-v0",

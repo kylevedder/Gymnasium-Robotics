@@ -842,7 +842,8 @@ class VisualPointMazeEnv(MazeEnv, EzPickle):
         )
 
     def _get_obs(self, point_obs) -> Dict[str, np.ndarray]:
-        obs = {"robot": np.concatenate([point_obs, [self.timestep]])}
+        # obs = {"robot": np.concatenate([point_obs, [self.timestep]])}
+        obs = {"robot": np.concatenate([point_obs, [0]])}
         if hasattr(self.point_env, "mujoco_renderer"):
             for c in self.camera_names:
                 img = self.point_env.mujoco_renderer.render(self.render_mode, camera_name=c)

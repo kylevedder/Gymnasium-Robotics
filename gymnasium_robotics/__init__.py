@@ -1087,8 +1087,63 @@ def register_robotics_envs():
                 "width": 32,
                 "height": 32,
                 "maze_fns": [add_cameras],
+                "continuing_task": False,
+                "position_noise_range": 0.001,
             },
-            max_episode_steps=150,
+            max_episode_steps=500,
+        )
+        register(
+            id=f"VisualPointMaze_UMaze{suffix}-v4",
+            entry_point="gymnasium_robotics.envs.maze.point_maze:VisualPointMazeEnv",
+            disable_env_checker=True,
+            kwargs={
+                "maze_map": maps.VISUAL_U_MAZE,
+                "maze_size_scaling": 1.5,
+                "render_mode": "rgb_array",
+                "camera_names": ["ego_cam", "q0_cam", "q1_cam", "q2_cam"],
+                "width": 32,
+                "height": 32,
+                "maze_fns": [add_cameras],
+                "continuing_task": False,
+                "position_noise_range": 0.001,
+            },
+            max_episode_steps=500,
+        )
+
+        register(
+            id=f"VisualPointMaze_UMaze{suffix}-v5",
+            entry_point="gymnasium_robotics.envs.maze.point_maze:VisualPointMazeEnv",
+            disable_env_checker=True,
+            kwargs={
+                "maze_map": maps.VISUAL_U_MAZE,
+                "maze_size_scaling": 1.25,
+                "render_mode": "rgb_array",
+                "camera_names": ["ego_cam", "q0_cam", "q1_cam", "q2_cam"],
+                "width": 32,
+                "height": 32,
+                "maze_fns": [add_cameras],
+                "continuing_task": False,
+                "position_noise_range": 0.001,
+            },
+            max_episode_steps=500,
+        )
+
+        register(
+            id=f"VisualPointMaze_UMaze{suffix}-v6",
+            entry_point="gymnasium_robotics.envs.maze.point_maze:VisualPointMazeEnv",
+            disable_env_checker=True,
+            kwargs={
+                "maze_map": maps.VISUAL_U_MAZE,
+                "maze_size_scaling": 1.0,
+                "render_mode": "rgb_array",
+                "camera_names": ["ego_cam", "q0_cam", "q1_cam", "q2_cam"],
+                "width": 32,
+                "height": 32,
+                "maze_fns": [add_cameras],
+                "continuing_task": False,
+                "position_noise_range": 0.001,
+            },
+            max_episode_steps=250,
         )
 
         register(

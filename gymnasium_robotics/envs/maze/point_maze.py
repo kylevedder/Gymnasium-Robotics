@@ -696,6 +696,7 @@ class VisualPointMazeEnv(MazeEnv, EzPickle):
         continuing_task: bool = True,
         maze_size_scaling: float = 1.0,
         camera_names: Optional[List[str]]=None,
+        position_noise_range: float = 0.25,
         maze_fns: Optional[List[Callable]] = None,
         **kwargs,
     ):
@@ -712,6 +713,7 @@ class VisualPointMazeEnv(MazeEnv, EzPickle):
             maze_height=0.4,
             reward_type=reward_type,
             continuing_task=continuing_task,
+            position_noise_range=position_noise_range,
             maze_fns=maze_fns,
             **kwargs,
         )
@@ -749,6 +751,7 @@ class VisualPointMazeEnv(MazeEnv, EzPickle):
             continuing_task,
             maze_size_scaling,
             camera_names,
+            position_noise_range,
             maze_fns,
             **kwargs,
         )

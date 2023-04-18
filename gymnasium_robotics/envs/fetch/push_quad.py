@@ -578,6 +578,11 @@ class MujocoFetchPushQuadPoseEnv(MujocoFetchEnv, EzPickle):
 
         if self.reward_type == "dense":
             reward = -goal_distance(obj0_pos, self.goal)
+            if info["is_success"] and self.goal_idx < len(self.goals) - 1:
+                self.goal_idx += 1
+                self.goal = self.goals[self.goal_idx]
+                obs[6:9] = self.goal.copy()
+                reward += 10
         else:
             if self.action_space_type == "object":
                 curr_goal_dist = goal_distance(obj0_pos, self.goal)
@@ -589,11 +594,12 @@ class MujocoFetchPushQuadPoseEnv(MujocoFetchEnv, EzPickle):
                 curr_grip_dist = goal_distance(grip_pos, obj0_pos)
                 reward = 1.0 * (curr_goal_dist < 0.05) - 0.01 * curr_grip_dist
 
-        if info["is_success"] and self.goal_idx < len(self.goals) - 1:
-            self.goal_idx += 1
-            self.goal = self.goals[self.goal_idx]
-            obs[6:9] = self.goal.copy()
+            if info["is_success"] and self.goal_idx < len(self.goals) - 1:
+                self.goal_idx += 1
+                self.goal = self.goals[self.goal_idx]
+                obs[6:9] = self.goal.copy()
 
+        info["goal_idx"] = self.goal_idx
         return obs, reward, terminated, truncated, info
     
 
@@ -612,7 +618,7 @@ class MujocoFetchPushQuadPoseEnv(MujocoFetchEnv, EzPickle):
         obs = self._get_obs()
         if self.render_mode == "human":
             self.render()
-        return obs, {}
+        return obs, {"goal_idx": 0}
 
     def render(self):
         """Render a frame of the MuJoCo simulation.
@@ -634,32 +640,38 @@ class MujocoFetchPushQuadPoseEnv(MujocoFetchEnv, EzPickle):
     #     pass
 
 if __name__ == "__main__":
-    env = MujocoFetchPushQuadPoseEnv(["camera_q1"], "dense", "object", render_mode="human", width=100, height=100)
+    env = MujocoFetchPushQuadPoseEnv(["camera_q1", "camera_q2", "camera_q3", "camera_q4"], "dense", "object", render_mode="rgb_array", width=100, height=100)
     returns = 0
     # while True:
     for i in range(1):
         obs, _ = env.reset()
         env.render()
         # go to the first corner
+        returns = 0
         for i in range(7):
             obs, rew, trunc, term, info =  env.step(np.array([-0.2, 0.2, 0, 0]))
-            env.render()
+            # env.render()
             print(f"step {i}", rew, info['is_success'], obs[6:9])
+            returns += rew
 
         # go to the 2nd corner
         for i in range(7):
             obs, rew, trunc, term, info =  env.step(np.array([0, -1., 0, 0]))
-            env.render()
+            # env.render()
             print(f"step {i}", rew, info['is_success'], obs[6:9])
+            returns += rew
 
         # go to the 3rd corner
         for i in range(7):
             obs, rew, trunc, term, info =  env.step(np.array([1, 0., 0, 0]))
-            env.render()
+            # env.render()
             print(f"step {i}", rew, info['is_success'], obs[6:9])
+            returns += rew
 
         # go to the 4th corner
         for i in range(7):
             obs, rew, trunc, term, info =  env.step(np.array([0, 1, 0, 0]))
-            env.render()
+            # env.render()
             print(f"step {i}", rew, info['is_success'], obs[6:9])
+            returns += rew
+        print("return", returns)

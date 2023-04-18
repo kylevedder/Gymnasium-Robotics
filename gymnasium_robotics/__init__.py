@@ -91,6 +91,21 @@ def register_robotics_envs():
         )
 
         register(
+            id=f"FetchPushQuadPose-v0",
+            entry_point="gymnasium_robotics.envs.fetch.push_quad:MujocoFetchPushQuadPoseEnv",
+            kwargs={
+                "camera_names": ["camera_q1"],
+                "reward_type": "dense",
+                "action_space_type": "robot",
+                "include_obj_pose": True,
+                "render_mode": "rgb_array",
+                "width": 64,
+                "height": 64,
+            },
+            max_episode_steps=50,
+        )
+
+        register(
             id=f"ObjectPushQuadSparseHard-v0",
             entry_point="gymnasium_robotics.envs.fetch.push_quad:MujocoFetchPushQuadHardEnv",
             kwargs={
@@ -1021,6 +1036,19 @@ def register_robotics_envs():
             max_episode_steps=1000,
         )
 
+        # ----- PointMaze from DMC -----
+        register(
+            id=f"DMCPointMaze-v0",
+            entry_point="gymnasium_robotics.envs.point_maze.maze:PointEnv",
+            disable_env_checker=True,
+            kwargs={
+                "render_mode": "rgb_array",
+                "width": 32,
+                "height": 32,
+            },
+            max_episode_steps=1000,
+        )
+
         # ----- PointMaze -----
         def add_cameras(tree, maze_size_scaling):
             import xml.etree.ElementTree as ET
@@ -1144,6 +1172,24 @@ def register_robotics_envs():
                 "position_noise_range": 0.001,
             },
             max_episode_steps=250,
+        )
+
+        register(
+            id=f"VisualPointMaze_UMaze{suffix}-v7",
+            entry_point="gymnasium_robotics.envs.maze.point_maze:VisualPointMazeEnv",
+            disable_env_checker=True,
+            kwargs={
+                "maze_map": maps.VISUAL_U_MAZE,
+                "maze_size_scaling": 4.0,
+                "render_mode": "rgb_array",
+                "camera_names": ["ego_cam", "q0_cam", "q1_cam", "q2_cam"],
+                "width": 32,
+                "height": 32,
+                "maze_fns": [add_cameras],
+                "continuing_task": False,
+                "position_noise_range": 0.001,
+            },
+            max_episode_steps=500,
         )
 
         register(

@@ -634,12 +634,32 @@ class MujocoFetchPushQuadPoseEnv(MujocoFetchEnv, EzPickle):
     #     pass
 
 if __name__ == "__main__":
-    env = MujocoFetchPushQuadPoseEnv(["camera_q1"], "dense", "robot", render_mode="rgb_array", width=100, height=100)
+    env = MujocoFetchPushQuadPoseEnv(["camera_q1"], "dense", "object", render_mode="human", width=100, height=100)
     returns = 0
-    obs, _ = env.reset()
-    env.render()
-    # solve the env
-    for i in range(100):
-        obs, rew, trunc, term, info =  env.step(np.array([0, 1, 0, 0]))
-        returns += rew
-    print(returns / 200)
+    # while True:
+    for i in range(1):
+        obs, _ = env.reset()
+        env.render()
+        # go to the first corner
+        for i in range(7):
+            obs, rew, trunc, term, info =  env.step(np.array([-0.2, 0.2, 0, 0]))
+            env.render()
+            print(f"step {i}", rew, info['is_success'], obs[6:9])
+
+        # go to the 2nd corner
+        for i in range(7):
+            obs, rew, trunc, term, info =  env.step(np.array([0, -1., 0, 0]))
+            env.render()
+            print(f"step {i}", rew, info['is_success'], obs[6:9])
+
+        # go to the 3rd corner
+        for i in range(7):
+            obs, rew, trunc, term, info =  env.step(np.array([1, 0., 0, 0]))
+            env.render()
+            print(f"step {i}", rew, info['is_success'], obs[6:9])
+
+        # go to the 4th corner
+        for i in range(7):
+            obs, rew, trunc, term, info =  env.step(np.array([0, 1, 0, 0]))
+            env.render()
+            print(f"step {i}", rew, info['is_success'], obs[6:9])

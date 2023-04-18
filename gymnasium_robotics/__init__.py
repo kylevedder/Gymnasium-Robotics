@@ -96,13 +96,29 @@ def register_robotics_envs():
             kwargs={
                 "camera_names": ["camera_q1"],
                 "reward_type": "dense",
-                "action_space_type": "robot",
+                "action_space_type": "object",
                 "include_obj_pose": True,
                 "render_mode": "rgb_array",
                 "width": 64,
                 "height": 64,
             },
             max_episode_steps=50,
+            disable_env_checker=True,
+        )
+        register(
+            id=f"FetchPushQuadPOPose-v0",
+            entry_point="gymnasium_robotics.envs.fetch.push_quad:MujocoFetchPushQuadPoseEnv",
+            kwargs={
+                "camera_names": ["camera_q1"],
+                "reward_type": "dense",
+                "action_space_type": "object",
+                "include_obj_pose": False,
+                "render_mode": "rgb_array",
+                "width": 64,
+                "height": 64,
+            },
+            max_episode_steps=50,
+            disable_env_checker=True,
         )
 
         register(

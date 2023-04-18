@@ -353,6 +353,7 @@ class MujocoFetchPushQuadPoseEnv(MujocoFetchEnv, EzPickle):
         }
         self.camera_names = camera_names
         self.include_obj_pose = include_obj_pose
+        self.action_space_type = action_space_type
         MujocoFetchEnv.__init__(
             self,
             model_path=MODEL_XML_PATH,
@@ -369,9 +370,12 @@ class MujocoFetchPushQuadPoseEnv(MujocoFetchEnv, EzPickle):
             reward_type=reward_type,
             **kwargs,
         )
-        self.action_space_type = action_space_type
         # consists of images and proprioception.
         _obs_space = {"robot": spaces.Box(low=float("-inf"), high=float("inf"), shape=(6,))}
+
+        # add goal pos as input
+        _obs_space["goal_pos"] = spaces.Box(low=float("-inf"), high=float("inf"), shape=(3,))
+
         if isinstance(camera_names, list) and len(camera_names) > 0:
             for c in camera_names:
                 _obs_space[c] = spaces.Box(-np.inf, np.inf, shape=(2,))
@@ -379,15 +383,15 @@ class MujocoFetchPushQuadPoseEnv(MujocoFetchEnv, EzPickle):
                 _obs_space["object0"] = spaces.Box(-np.inf, np.inf, shape=(3,))
         self._obs_space = _obs_space
         self.observation_space = spaces.Box(-np.inf, np.inf, shape=(np.sum([np.prod(x.shape) for x in _obs_space.values()]),))
-        EzPickle.__init__(self, camera_names=camera_names, reward_type=reward_type, action_space_type=action_space_type, include_obj_pose=include_obj_pose **kwargs)
+        EzPickle.__init__(self, camera_names=camera_names, reward_type=reward_type, action_space_type=action_space_type, include_obj_pose=include_obj_pose, **kwargs)
         
         self.goal_idx = 0
         q1_goal = np.array([1.1, 0.95, 0.42])
         q2_goal = np.array([1.1, 0.55, 0.42])
         q3_goal = np.array([1.5, 0.55, 0.42])
         q4_goal = np.array([1.5, 0.95, 0.42])
-        # self.goals = [q1_goal, q2_goal, q3_goal, q4_goal]
-        self.goals = [q1_goal]
+        self.goals = [q1_goal, q2_goal, q3_goal, q4_goal]
+        # self.goals = [q1_goal]
 
     def _sample_goal(self):
         goal = self.goals[self.goal_idx]
@@ -474,13 +478,18 @@ class MujocoFetchPushQuadPoseEnv(MujocoFetchEnv, EzPickle):
     def _get_obs(self):
         obs = {}
         # positions
-        grip_pos = self._utils.get_site_xpos(self.model, self.data, "robot0:grip")
+        if self.action_space_type == "robot":
+            grip_pos = self._utils.get_site_xpos(self.model, self.data, "robot0:grip")
 
-        dt = self.n_substeps * self.model.opt.timestep
-        grip_velp = (
-            self._utils.get_site_xvelp(self.model, self.data, "robot0:grip") * dt
-        )
-        obs["robot"] = np.concatenate([grip_pos, grip_velp], dtype=np.float32)
+            dt = self.n_substeps * self.model.opt.timestep
+            grip_velp = (
+                self._utils.get_site_xvelp(self.model, self.data, "robot0:grip") * dt
+            )
+            obs["robot"] = np.concatenate([grip_pos, grip_velp], dtype=np.float32)
+        else: # object only action space doesn't need robot state.
+            obs["robot"] = np.zeros((6,), dtype=np.float32)
+        
+        obs["goal_pos"] = self.goal.copy()
         if hasattr(self, "mujoco_renderer"):
             for c in self.camera_names:
                 # get object position
@@ -569,9 +578,6 @@ class MujocoFetchPushQuadPoseEnv(MujocoFetchEnv, EzPickle):
 
         if self.reward_type == "dense":
             reward = -goal_distance(obj0_pos, self.goal)
-            if info["is_success"] and self.goal_idx < len(self.goals) - 1:
-                self.goal_idx += 1
-                self.goal = self.goals[self.goal_idx]
         else:
             if self.action_space_type == "object":
                 curr_goal_dist = goal_distance(obj0_pos, self.goal)
@@ -583,9 +589,10 @@ class MujocoFetchPushQuadPoseEnv(MujocoFetchEnv, EzPickle):
                 curr_grip_dist = goal_distance(grip_pos, obj0_pos)
                 reward = 1.0 * (curr_goal_dist < 0.05) - 0.01 * curr_grip_dist
 
-            if info["is_success"] and self.goal_idx < len(self.goals) - 1:
-                self.goal_idx += 1
-                self.goal = self.goals[self.goal_idx]
+        if info["is_success"] and self.goal_idx < len(self.goals) - 1:
+            self.goal_idx += 1
+            self.goal = self.goals[self.goal_idx]
+            obs[6:9] = self.goal.copy()
 
         return obs, reward, terminated, truncated, info
     
@@ -628,5 +635,11 @@ class MujocoFetchPushQuadPoseEnv(MujocoFetchEnv, EzPickle):
 
 if __name__ == "__main__":
     env = MujocoFetchPushQuadPoseEnv(["camera_q1"], "dense", "robot", render_mode="rgb_array", width=100, height=100)
+    returns = 0
     obs, _ = env.reset()
-    import ipdb; ipdb.set_trace()
+    env.render()
+    # solve the env
+    for i in range(100):
+        obs, rew, trunc, term, info =  env.step(np.array([0, 1, 0, 0]))
+        returns += rew
+    print(returns / 200)

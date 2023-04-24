@@ -21,6 +21,7 @@ class SweepMarblesEnv(MujocoEnv):
         assert observation_type in {"PO", "FO"}
         assert reward_type in {"dense", "sparse"}
 
+        self.reward_scale = 10 
         self.observation_type = observation_type
         self.reward_type = reward_type
         xml_file = path.join(
@@ -38,13 +39,14 @@ class SweepMarblesEnv(MujocoEnv):
             model_path=xml_file,
             frame_skip=20,
             observation_space=observation_space,
+            camera_name="overhead_camera",
             **kwargs
         )
 
     def reset_model(self) -> np.ndarray:
-        qpos = np.array([0., 0., 0., 0., 0.42, 1. ,0., 0., 0.])
-        qpos[2] = np.random.uniform(-0.005, 0.005)
-        qpos[3] = np.random.uniform(-0.025, 0.025)
+        qpos = np.array([0., 0., 0., 0.2, 0.42, 1. ,0., 0., 0.])
+        qpos[2] += np.random.uniform(-0.005, 0.005)
+        qpos[3] += np.random.uniform(-0.025, 0.025)
         self.set_state(qpos, self.init_qvel)
         self.initial_marble_pos = mujoco_utils.get_site_xpos(self.model, self.data, "object0").copy()
         obs, _ = self._get_obs()
@@ -64,9 +66,11 @@ class SweepMarblesEnv(MujocoEnv):
         inside_bin = xy_dist < 0.05 and z_dist < 0.05
 
         if self.reward_type == "sparse":
-            reward = float(inside_bin)
+            reward = 10 * float(inside_bin)
         if self.reward_type == "dense":
-            reward = float(inside_bin) - 0.1 * xy_dist  - 0.02 * z_dist
+            reward = 10 * float(inside_bin) - 0.1 * xy_dist  - 0.02 * z_dist
+        
+        reward *= self.reward_scale
 
         terminated = inside_bin
         truncated = False
@@ -106,7 +110,7 @@ if __name__ == "__main__":
         done = False
         i = 0
         while not done:
-            obs, rew, term, trunc, info = env.step([0.9,0])
+            obs, rew, term, trunc, info = env.step([0.2,0])
             # print("step", i, obs[4])
             i += 1
             done = term or trunc

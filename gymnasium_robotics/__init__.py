@@ -963,8 +963,8 @@ def register_robotics_envs():
                     "observation_type": observation_type,
                     "reward_type": reward_type,
                     "render_mode": "rgb_array",
-                    "width": 100,
-                    "height": 100,
+                    "width": 200,
+                    "height": 200,
                 },
                 max_episode_steps=100,
             )

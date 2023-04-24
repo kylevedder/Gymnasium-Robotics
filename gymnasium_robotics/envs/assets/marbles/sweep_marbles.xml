@@ -18,7 +18,7 @@
 			<geom size="0.25 0.35 0.2" type="box" mass="2000" material="table_mat"></geom>
 		</body>
 
-        <body name="sweeper" pos="0 -0.15 0.4">
+        <body name="sweeper" pos="0 0.15 0.4">
             <!-- <joint name="slide_x" type="slide" limited="true" axis="1 0 0" range="-1.5 1.5" damping="1000" /> -->
             <joint name="slide_y" type="slide" limited="true" axis="0 1 0" range="-1.5 1.5" damping="1000" />
             <!-- <joint name="slide_z" type="slide" limited="true" axis="0 0 1" range="0 5" damping="1000" /> -->
@@ -26,7 +26,7 @@
             <geom name="arm" type="box" size=".2 .025 .1" pos="0 0 0.1" contype="3" conaffinity="3"/>
         </body>
 
-		<body name="object0" pos="0 0 0.42">
+		<body name="object0" pos="0 0.2 0.42">
 			<joint name="object0:joint" type="free" damping="0.01"></joint>
 			<geom size="0.025" type="sphere" condim="3" name="object0" rgba="1 0 1 1" mass="2"></geom>
 			<site name="object0" pos="0 0 0" size="0.02 0.02 0.02" rgba="1 0 0 1" type="sphere"></site>
@@ -35,10 +35,14 @@
         <include file="small_bin.xml"></include>
 		<light directional="true" ambient="0.2 0.2 0.2" diffuse="0.8 0.8 0.8" specular="0.3 0.3 0.3" castshadow="false" pos="0 0 4" dir="0 0 -1" name="light0"></light>
 
+        <body name="overhead_camera">
+            <camera name="overhead_camera" fovy="60" mode="targetbody" target="bin" pos="0 0.15 1.0" />
+        </body>
+
     </worldbody>
     <actuator>
         <!-- <motor joint="slide_x" gear="4000" ctrlrange="-1 1" ctrllimited="true" /> -->
-        <motor joint="slide_y" gear="2000" ctrlrange="-1 1" ctrllimited="true"/>
+        <motor joint="slide_y" gear="2000" ctrlrange="0 1" ctrllimited="true"/>
         <!-- <motor joint="slide_z" gear="1000" ctrlrange="-1 1" ctrllimited="true"/> -->
         <motor joint="rotate_z" gear="1000" ctrlrange="-1 1" ctrllimited="true"/>
     </actuator>

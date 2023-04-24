@@ -32,7 +32,7 @@ class SweepMarblesEnv(MujocoEnv):
             )
         elif observation_type == "FO":
             observation_space = spaces.Box(
-                low=-np.inf, high=np.inf, shape=(10,), dtype=np.float64
+                low=-np.inf, high=np.inf, shape=(13,), dtype=np.float64
             )
         super().__init__(
             model_path=xml_file,
@@ -79,7 +79,7 @@ class SweepMarblesEnv(MujocoEnv):
     def _get_obs(self) -> np.ndarray:
         """
         PO: 7 dimensional. Dims 1-3 is the initial marble pos. Dims 4-7 are sweeper xy, xy vel.
-        FO: 10 dimensional. Dims 1-4 is the sweeper xy, xy vel. Dims 5-10 are marble xyz pos and xyz vel. 
+        FO: 13 dimensional. PO obs + marble xyz pos, xyz vel. 
         """
         sweeper_y = mujoco_utils.get_joint_qpos(self.model, self.data, "slide_y").copy()
         sweeper_z = mujoco_utils.get_joint_qpos(self.model, self.data, "rotate_z").copy()
@@ -94,9 +94,8 @@ class SweepMarblesEnv(MujocoEnv):
             # get marble center and linear velocities
             marble_pos = mujoco_utils.get_joint_qpos(self.model, self.data, "object0:joint")[:3]
             marble_vel = mujoco_utils.get_joint_qvel(self.model, self.data, "object0:joint")[:3]
-            obs = np.concatenate([sweeper_state, marble_pos, marble_vel])
+            obs = np.concatenate([self.initial_marble_pos, sweeper_state, marble_pos, marble_vel])
             return obs, {}
-
 
 if __name__ == "__main__":
     import gymnasium

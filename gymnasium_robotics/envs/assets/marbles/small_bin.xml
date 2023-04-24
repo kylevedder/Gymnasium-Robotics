@@ -1,0 +1,10 @@
+<mujoco>
+    <body name="bin" pos="0 0.55 0">
+        <site name="bin_site" pos="0 0 0.03" size="0.02 0.02 0.02" rgba="1 0 0 1" type="sphere"></site>
+        <geom rgba="0 1 0 1" name="bottom" type="box" size=".05 .05 .025" pos="0 0 0"/>
+        <geom rgba="0 0 1 1" name="wall_1" type="box" size="0.05 .01 .1" pos="0 -0.05 0"/>
+        <geom rgba="0 0 1 1" name="wall_2" type="box" size="0.05 .01 .1" pos="0 0.05 0"/>
+        <geom rgba="0 0 1 1" name="wall_3" type="box" size="0.01 .05 .1" pos="0.05 0.0 0"/>
+        <geom rgba="0 0 1 1" name="wall_4" type="box" size="0.01 .05 .1" pos="-0.05 0.0 0"/>
+    </body>
+</mujoco>

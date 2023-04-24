@@ -76,105 +76,6 @@ def register_robotics_envs():
             max_episode_steps=50,
         )
 
-        register(
-            id=f"ObjectPushQuadHard-v0",
-            entry_point="gymnasium_robotics.envs.fetch.push_quad:MujocoFetchPushQuadHardEnv",
-            kwargs={
-                "camera_names": ["camera_q1", "camera_q2", "camera_q3", "camera_q4","camera_overhead", "gripper_camera_rgb", "camera_under"],
-                "reward_type": "dense",
-                "action_space_type": "object",
-                "render_mode": "rgb_array",
-                "width": 32,
-                "height": 32,
-            },
-            max_episode_steps=50,
-        )
-
-        register(
-            id=f"FetchPushQuadPose-v0",
-            entry_point="gymnasium_robotics.envs.fetch.push_quad:MujocoFetchPushQuadPoseEnv",
-            kwargs={
-                "camera_names": ["camera_q1"],
-                "reward_type": "dense",
-                "action_space_type": "object",
-                "include_obj_pose": True,
-                "render_mode": "rgb_array",
-                "width": 64,
-                "height": 64,
-            },
-            max_episode_steps=50,
-            disable_env_checker=True,
-        )
-        register(
-            id=f"FetchPushQuadPOPose-v0",
-            entry_point="gymnasium_robotics.envs.fetch.push_quad:MujocoFetchPushQuadPoseEnv",
-            kwargs={
-                "camera_names": ["camera_q1"],
-                "reward_type": "dense",
-                "action_space_type": "object",
-                "include_obj_pose": False,
-                "render_mode": "rgb_array",
-                "width": 64,
-                "height": 64,
-            },
-            max_episode_steps=50,
-            disable_env_checker=True,
-        )
-
-        register(
-            id=f"ObjectPushQuadSparseHard-v0",
-            entry_point="gymnasium_robotics.envs.fetch.push_quad:MujocoFetchPushQuadHardEnv",
-            kwargs={
-                "camera_names": ["camera_q1", "camera_q2", "camera_q3", "camera_q4","camera_overhead", "gripper_camera_rgb", "camera_under"],
-                "reward_type": "sparse",
-                "action_space_type": "object",
-                "render_mode": "rgb_array",
-                "width": 32,
-                "height": 32,
-            },
-            max_episode_steps=50,
-        )
-
-        register(
-            id=f"FetchPushQuadHard-v0",
-            entry_point="gymnasium_robotics.envs.fetch.push_quad:MujocoFetchPushQuadHardEnv",
-            kwargs={
-                "camera_names": ["camera_q1", "camera_q2", "camera_q3", "camera_q4","camera_overhead", "gripper_camera_rgb", "camera_under"],
-                "reward_type": "dense",
-                "action_space_type": "robot",
-                "render_mode": "rgb_array",
-                "width": 32,
-                "height": 32,
-            },
-            max_episode_steps=50,
-        )
-        register(
-            id=f"FetchPushQuadSparseHard-v0",
-            entry_point="gymnasium_robotics.envs.fetch.push_quad:MujocoFetchPushQuadHardEnv",
-            kwargs={
-                "camera_names": ["camera_q1", "camera_q2", "camera_q3", "camera_q4","camera_overhead", "gripper_camera_rgb", "camera_under"],
-                "reward_type": "sparse",
-                "action_space_type": "robot",
-                "render_mode": "rgb_array",
-                "width": 32,
-                "height": 32,
-            },
-            max_episode_steps=50,
-        )
-
-        register(
-            id=f"FetchPushQuadHardPO-v0",
-            entry_point="gymnasium_robotics.envs.fetch.push_quad:MujocoFetchPushQuadHardEnv",
-            kwargs={
-                "camera_names": ["camera_overhead", "gripper_camera_rgb"],
-                "reward_type": "dense",
-                "action_space_type": "robot",
-                "render_mode": "rgb_array",
-                "width": 32,
-                "height": 32,
-            },
-            max_episode_steps=50,
-        )
 
         # Hand
         register(
@@ -1052,18 +953,21 @@ def register_robotics_envs():
             max_episode_steps=1000,
         )
 
-        # ----- PointMaze from DMC -----
-        register(
-            id=f"DMCPointMaze-v0",
-            entry_point="gymnasium_robotics.envs.point_maze.maze:PointEnv",
-            disable_env_checker=True,
-            kwargs={
-                "render_mode": "rgb_array",
-                "width": 32,
-                "height": 32,
-            },
-            max_episode_steps=1000,
-        )
+        # ----- Marble Env -----
+        for observation_type in ["PO", "FO"]:
+            register(
+                id=f"SweepMarbles{observation_type}{reward_type.capitalize()}-v0",
+                entry_point="gymnasium_robotics.envs.marbles.marbles:SweepMarblesEnv",
+                disable_env_checker=True,
+                kwargs={
+                    "observation_type": observation_type,
+                    "reward_type": reward_type,
+                    "render_mode": "rgb_array",
+                    "width": 100,
+                    "height": 100,
+                },
+                max_episode_steps=100,
+            )
 
         # ----- PointMaze -----
         def add_cameras(tree, maze_size_scaling):
@@ -1355,6 +1259,119 @@ def register_robotics_envs():
         id="FrankaKitchen-v1",
         entry_point="gymnasium_robotics.envs.franka_kitchen:KitchenEnv",
         max_episode_steps=280,
+    )
+
+    register(
+        id=f"ObjectPushQuadHard-v0",
+        entry_point="gymnasium_robotics.envs.fetch.push_quad:MujocoFetchPushQuadHardEnv",
+        kwargs={
+            "camera_names": ["camera_q1", "camera_q2", "camera_q3", "camera_q4","camera_overhead", "gripper_camera_rgb", "camera_under"],
+            "reward_type": "dense",
+            "action_space_type": "object",
+            "render_mode": "rgb_array",
+            "width": 32,
+            "height": 32,
+        },
+        max_episode_steps=50,
+    )
+
+    register(
+        id=f"FetchPushQuadPose-v0",
+        entry_point="gymnasium_robotics.envs.fetch.push_quad:MujocoFetchPushQuadPoseEnv",
+        kwargs={
+            "camera_names": ["camera_q1"],
+            "reward_type": "dense",
+            "action_space_type": "object",
+            "include_obj_pose": True,
+            "render_mode": "rgb_array",
+            "width": 64,
+            "height": 64,
+        },
+        max_episode_steps=50,
+        disable_env_checker=True,
+    )
+    register(
+        id=f"FetchPushQuadPOPose-v0",
+        entry_point="gymnasium_robotics.envs.fetch.push_quad:MujocoFetchPushQuadPoseEnv",
+        kwargs={
+            "camera_names": ["camera_q1"],
+            "reward_type": "dense",
+            "action_space_type": "object",
+            "include_obj_pose": False,
+            "render_mode": "rgb_array",
+            "width": 64,
+            "height": 64,
+        },
+        max_episode_steps=50,
+        disable_env_checker=True,
+    )
+
+    register(
+        id=f"ObjectPushQuadSparseHard-v0",
+        entry_point="gymnasium_robotics.envs.fetch.push_quad:MujocoFetchPushQuadHardEnv",
+        kwargs={
+            "camera_names": ["camera_q1", "camera_q2", "camera_q3", "camera_q4","camera_overhead", "gripper_camera_rgb", "camera_under"],
+            "reward_type": "sparse",
+            "action_space_type": "object",
+            "render_mode": "rgb_array",
+            "width": 32,
+            "height": 32,
+        },
+        max_episode_steps=50,
+    )
+
+    register(
+        id=f"FetchPushQuadHard-v0",
+        entry_point="gymnasium_robotics.envs.fetch.push_quad:MujocoFetchPushQuadHardEnv",
+        kwargs={
+            "camera_names": ["camera_q1", "camera_q2", "camera_q3", "camera_q4","camera_overhead", "gripper_camera_rgb", "camera_under"],
+            "reward_type": "dense",
+            "action_space_type": "robot",
+            "render_mode": "rgb_array",
+            "width": 32,
+            "height": 32,
+        },
+        max_episode_steps=50,
+    )
+    register(
+        id=f"FetchPushQuadSparseHard-v0",
+        entry_point="gymnasium_robotics.envs.fetch.push_quad:MujocoFetchPushQuadHardEnv",
+        kwargs={
+            "camera_names": ["camera_q1", "camera_q2", "camera_q3", "camera_q4","camera_overhead", "gripper_camera_rgb", "camera_under"],
+            "reward_type": "sparse",
+            "action_space_type": "robot",
+            "render_mode": "rgb_array",
+            "width": 32,
+            "height": 32,
+        },
+        max_episode_steps=50,
+    )
+
+    register(
+        id=f"FetchPushQuadHardPO-v0",
+        entry_point="gymnasium_robotics.envs.fetch.push_quad:MujocoFetchPushQuadHardEnv",
+        kwargs={
+            "camera_names": ["camera_overhead", "gripper_camera_rgb"],
+            "reward_type": "dense",
+            "action_space_type": "robot",
+            "render_mode": "rgb_array",
+            "width": 32,
+            "height": 32,
+        },
+        max_episode_steps=50,
+    )
+
+    # ----- PointMaze from DMC -----
+    register(
+        id=f"DMCPointMaze-v0",
+        entry_point="gymnasium_robotics.envs.point_maze.maze:PointEnv",
+        disable_env_checker=True,
+        kwargs={
+            "render_mode": "rgb_array",
+            "width": 32,
+            "height": 32,
+        },
+        max_episode_steps=1000,
     )
 
 

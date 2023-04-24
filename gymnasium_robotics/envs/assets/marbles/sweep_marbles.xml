@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mujoco model="gripper_only_robot">
+    <compiler angle="radian" coordinate="local" texturedir="../textures"></compiler>
+    <asset>
+        <texture type="skybox" builtin="gradient" rgb1="0.44 0.85 0.56" rgb2="0.46 0.87 0.58" width="32" height="32"></texture>
+        <texture name="texture_block" file="block.png" gridsize="3 4" gridlayout=".U..LFRB.D.."></texture>
+
+        <material name="floor_mat" specular="0" shininess="0.5" reflectance="0" rgba="0.2 0.2 0.2 1"></material>
+        <material name="table_mat" specular="0" shininess="0.5" reflectance="0" rgba="0.93 0.93 0.93 1"></material>
+        <material name="block_mat" specular="0" shininess="0.5" reflectance="0" rgba="0.2 0.2 0.2 1"></material>
+        <material name="puck_mat" specular="0" shininess="0.5" reflectance="0" rgba="0.2 0.2 0.2 1"></material>
+    </asset>
+    <asset>
+    </asset>
+    <worldbody>
+		<geom name="floor0" pos="0 0 0" size="0.85 0.7 1" type="plane" condim="3" material="floor_mat"></geom>
+		<body pos="0 0 0.2" name="table0">
+			<geom size="0.25 0.35 0.2" type="box" mass="2000" material="table_mat"></geom>
+		</body>
+
+        <body name="sweeper" pos="0 -0.15 0.4">
+            <!-- <joint name="slide_x" type="slide" limited="true" axis="1 0 0" range="-1.5 1.5" damping="1000" /> -->
+            <joint name="slide_y" type="slide" limited="true" axis="0 1 0" range="-1.5 1.5" damping="1000" />
+            <!-- <joint name="slide_z" type="slide" limited="true" axis="0 0 1" range="0 5" damping="1000" /> -->
+            <joint name="rotate_z" type="hinge" limited="true" axis="0 0 1" range="-31.4 31.4" damping="1000" />
+            <geom name="arm" type="box" size=".2 .025 .1" pos="0 0 0.1" contype="3" conaffinity="3"/>
+        </body>
+
+		<body name="object0" pos="0 0 0.42">
+			<joint name="object0:joint" type="free" damping="0.01"></joint>
+			<geom size="0.025" type="sphere" condim="3" name="object0" rgba="1 0 1 1" mass="2"></geom>
+			<site name="object0" pos="0 0 0" size="0.02 0.02 0.02" rgba="1 0 0 1" type="sphere"></site>
+		</body>
+
+        <include file="small_bin.xml"></include>
+		<light directional="true" ambient="0.2 0.2 0.2" diffuse="0.8 0.8 0.8" specular="0.3 0.3 0.3" castshadow="false" pos="0 0 4" dir="0 0 -1" name="light0"></light>
+
+    </worldbody>
+    <actuator>
+        <!-- <motor joint="slide_x" gear="4000" ctrlrange="-1 1" ctrllimited="true" /> -->
+        <motor joint="slide_y" gear="2000" ctrlrange="-1 1" ctrllimited="true"/>
+        <!-- <motor joint="slide_z" gear="1000" ctrlrange="-1 1" ctrllimited="true"/> -->
+        <motor joint="rotate_z" gear="1000" ctrlrange="-1 1" ctrllimited="true"/>
+    </actuator>
+</mujoco>

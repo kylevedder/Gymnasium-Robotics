@@ -955,19 +955,21 @@ def register_robotics_envs():
 
         # ----- Marble Env -----
         for observation_type in ["PO", "FO"]:
-            register(
-                id=f"SweepMarbles{observation_type}{reward_type.capitalize()}-v0",
-                entry_point="gymnasium_robotics.envs.marbles.marbles:SweepMarblesEnv",
-                disable_env_checker=True,
-                kwargs={
-                    "observation_type": observation_type,
-                    "reward_type": reward_type,
-                    "render_mode": "rgb_array",
-                    "width": 200,
-                    "height": 200,
-                },
-                max_episode_steps=100,
-            )
+            for pixel_ob in ["pixels", "state"]:
+                register(
+                    id=f"SweepMarbles{observation_type}{pixel_ob.capitalize()}{reward_type.capitalize()}-v0",
+                    entry_point="gymnasium_robotics.envs.marbles.marbles:SweepMarblesEnv",
+                    disable_env_checker=True,
+                    kwargs={
+                        "observation_type": observation_type,
+                        "pixel_ob": pixel_ob,
+                        "reward_type": reward_type,
+                        "render_mode": "rgb_array",
+                        "width": 64,
+                        "height": 64,
+                    },
+                    max_episode_steps=100,
+                )
 
         # ----- PointMaze -----
         def add_cameras(tree, maze_size_scaling):

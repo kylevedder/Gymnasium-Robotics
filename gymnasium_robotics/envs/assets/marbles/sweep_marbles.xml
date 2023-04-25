@@ -36,7 +36,11 @@
 		<light directional="true" ambient="0.2 0.2 0.2" diffuse="0.8 0.8 0.8" specular="0.3 0.3 0.3" castshadow="false" pos="0 0 4" dir="0 0 -1" name="light0"></light>
 
         <body name="overhead_camera">
-            <camera name="overhead_camera" fovy="60" mode="targetbody" target="bin" pos="0 0.15 1.0" />
+            <camera name="overhead_camera" fovy="60" mode="fixed" pos="0 0.35 0.9" euler="0 0.0 1.57"  />
+        </body>
+        <body name="robot_camera">
+            <!-- <camera name="robot_camera" fovy="60" mode="fixed" pos="0 -0.15 1.0" euler="0 0.0 1.57"  /> -->
+            <camera name="robot_camera" pos="0.007 -0.2 0.751" xyaxes="1.0 0 0 0.0 0.5 0.872"/>
         </body>
 
     </worldbody>

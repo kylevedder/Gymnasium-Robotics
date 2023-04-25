@@ -43,6 +43,9 @@ class SweepMarblesEnv(MujocoEnv):
                 )
             elif self.pixel_ob == "pixels":
                 _observation_space = {
+                    "sweeper_state": spaces.Box(
+                        low=-np.inf, high=np.inf, shape=(7,), dtype=np.float64
+                    ),
                     "initial_view": spaces.Box(
                         low=0, high=255, shape=(64,64,3), dtype=np.uint8
                     ),
@@ -58,6 +61,9 @@ class SweepMarblesEnv(MujocoEnv):
                 )
             elif self.pixel_ob == "pixels":
                 _observation_space = {
+                    "sweeper_state": spaces.Box(
+                        low=-np.inf, high=np.inf, shape=(7,), dtype=np.float64
+                    ),
                     "initial_view": spaces.Box(
                         low=0, high=255, shape=(64,64,3), dtype=np.uint8
                     ),
@@ -134,13 +140,13 @@ class SweepMarblesEnv(MujocoEnv):
             PO: TODO: decide PO and FO camera viewpoints.
             FO:
         """
-        if self.pixel_ob == "state":
-            sweeper_y = mujoco_utils.get_joint_qpos(self.model, self.data, "slide_y").copy()
-            sweeper_z = mujoco_utils.get_joint_qpos(self.model, self.data, "rotate_z").copy()
-            sweeper_y_v = mujoco_utils.get_joint_qvel(self.model, self.data, "slide_y").copy()
-            sweeper_z_v = mujoco_utils.get_joint_qvel(self.model, self.data, "rotate_z").copy()
+        sweeper_y = mujoco_utils.get_joint_qpos(self.model, self.data, "slide_y").copy()
+        sweeper_z = mujoco_utils.get_joint_qpos(self.model, self.data, "rotate_z").copy()
+        sweeper_y_v = mujoco_utils.get_joint_qvel(self.model, self.data, "slide_y").copy()
+        sweeper_z_v = mujoco_utils.get_joint_qvel(self.model, self.data, "rotate_z").copy()
 
-            sweeper_state =  np.concatenate([sweeper_y, sweeper_z, sweeper_y_v, sweeper_z_v])
+        sweeper_state =  np.concatenate([sweeper_y, sweeper_z, sweeper_y_v, sweeper_z_v])
+        if self.pixel_ob == "state":
             if self.observation_type == "PO":
                 obs = np.concatenate([self.initial_marble_pos, sweeper_state])
                 return obs, {}
@@ -151,7 +157,7 @@ class SweepMarblesEnv(MujocoEnv):
                 obs = np.concatenate([self.initial_marble_pos, sweeper_state, marble_pos, marble_vel])
                 return obs, {}
         elif self.pixel_ob == "pixels":
-            obs = {"initial_view": self.initial_view}
+            obs = {"sweeper_state": sweeper_state, "initial_view": self.initial_view}
             cameras = ["robot_camera"]
             if self.observation_type == "FO":
                 cameras += ["overhead_camera"]

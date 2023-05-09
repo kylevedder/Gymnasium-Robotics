@@ -955,7 +955,7 @@ def register_robotics_envs():
 
         # ----- Marble Env -----
         for observation_type in ["PO", "FO"]:
-            for pixel_ob in ["pixels", "state"]:
+            for pixel_ob in ["pixels", "state", "depth"]:
                 register(
                     id=f"SweepMarbles{observation_type}{pixel_ob.capitalize()}{reward_type.capitalize()}-v0",
                     entry_point="gymnasium_robotics.envs.marbles.marbles:SweepMarblesEnv",

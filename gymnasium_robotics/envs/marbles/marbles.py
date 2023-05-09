@@ -26,7 +26,7 @@ class SweepMarblesEnv(MujocoEnv):
             reward_type (str, optional): If the reward function is dense or sparse. Defaults to "dense".
         """
         assert observation_type in {"PO", "FO"}
-        assert pixel_ob in {"state", "pixels"}
+        assert pixel_ob in {"state", "pixels", "depth"}
         assert reward_type in {"dense", "sparse"}
 
         self.reward_scale = 10 
@@ -54,6 +54,19 @@ class SweepMarblesEnv(MujocoEnv):
                     ),
                 }
                 observation_space = spaces.Dict(_observation_space)
+            elif self.pixel_ob == "depth":
+                _observation_space = {
+                    "sweeper_state": spaces.Box(
+                        low=-np.inf, high=np.inf, shape=(7,), dtype=np.float64
+                    ),
+                    "initial_view": spaces.Box(
+                        low=0, high=255, shape=(64,64,1), dtype=np.float64
+                    ),
+                    "robot_camera": spaces.Box(
+                        low=0, high=255, shape=(64,64,1), dtype=np.float64
+                    ),
+                }
+                observation_space = spaces.Dict(_observation_space)
         elif observation_type == "FO":
             if self.pixel_ob == "state":
                 observation_space = spaces.Box(
@@ -75,6 +88,22 @@ class SweepMarblesEnv(MujocoEnv):
                     ),
                 }
                 observation_space = spaces.Dict(_observation_space)
+            elif self.pixel_ob == "depth":
+                _observation_space = {
+                    "sweeper_state": spaces.Box(
+                        low=-np.inf, high=np.inf, shape=(7,), dtype=np.float64
+                    ),
+                    "initial_view": spaces.Box(
+                        low=0, high=255, shape=(64,64,3), dtype=np.float64
+                    ),
+                    "overhead_camera": spaces.Box(
+                        low=0, high=255, shape=(64,64,3), dtype=np.float64
+                    ),
+                    "robot_camera": spaces.Box(
+                        low=0, high=255, shape=(64,64,3), dtype=np.float64
+                    ),
+                }
+                observation_space = spaces.Dict(_observation_space)
 
         super().__init__(
             model_path=xml_file,
@@ -87,13 +116,13 @@ class SweepMarblesEnv(MujocoEnv):
     def reset_model(self) -> np.ndarray:
         marble_x_noise = np.random.uniform(-0.005, 0.005)
         marble_y_noise = np.random.uniform(-0.025, 0.025)
-        if self.pixel_ob == "pixels":
+        if self.pixel_ob in {"depth", "pixels"}:
             # first render the initial view where the sweeper is out of the image
             qpos = np.array([-10., 0., 0., 0.2, 0.42, 1. ,0., 0., 0.])
             qpos[2] += marble_x_noise
             qpos[3] += marble_y_noise
             self.set_state(qpos, self.init_qvel)
-            self.initial_view = self.mujoco_renderer.render(self.render_mode, camera_name="robot_camera")
+            self.initial_view = self.mujoco_renderer.render("rgb_array" if self.pixel_ob == "pixels" else "depth_array", camera_name="robot_camera")
 
         qpos = np.array([0., 0., 0., 0.2, 0.42, 1. ,0., 0., 0.])
         qpos[2] += marble_x_noise
@@ -164,31 +193,60 @@ class SweepMarblesEnv(MujocoEnv):
             for c in cameras:
                 obs[c] = self.mujoco_renderer.render(self.render_mode, camera_name=c)
             return obs, {}
+        elif self.pixel_ob == "depth":
+            obs = {"sweeper_state": sweeper_state, "initial_view": self.initial_view[..., None]}
+            cameras = ["robot_camera"]
+            if self.observation_type == "FO":
+                cameras += ["overhead_camera"]
+            for c in cameras:
+                obs[c] = self.mujoco_renderer.render("depth_array", camera_name=c)[..., None]
+            return obs, {}
 
 
 if __name__ == "__main__":
     import gymnasium
-    # env = SweepMarblesEnv(observation_type="FO", render_mode="human")
-    env = gymnasium.make("SweepMarblesFOPixelsDense-v0", render_mode="rgb_array")
     import imageio
-    for i in range(1):
-        video = []
-        obs, _ = env.reset()
-        img = []
-        for k, v in obs.items():
-            img.append(v)
-        img = np.concatenate(img, axis=1)
-        video.append(img)
-        done = False
-        i = 0
-        while not done:
-            obs, rew, term, trunc, info = env.step([0.4,0])
-            img = []
-            for k, v in obs.items():
-                img.append(v)
-            video.append(np.concatenate(img, axis=1))
-            i += 1
-            done = term or trunc
-            if i > 50:
-                break
-        imageio.mimsave("test.gif", video, fps=10)
+    env = gymnasium.make("SweepMarblesFODepthDense-v0", render_mode="rgb_array")
+    obs, _ = env.reset()
+    def depth_to_img(depth):
+        # logic taken from mujoco colab tutorial
+        # Shift nearest values to the origin.
+        depth -= depth.min()
+        # Scale by 2 mean distances of near rays.
+        depth /= 2*depth[depth <= 1].mean()
+        # Scale to [0, 255]
+        pixels = 255*np.clip(depth, 0, 1)
+        return pixels.astype(np.uint8).squeeze()
+
+    for k,v in obs.items():
+        if k != "sweeper_state":
+            img = depth_to_img(v)
+            imageio.imwrite(f"{k}_depth.png", img)
+
+
+    import ipdb; ipdb.set_trace()
+    # env = gymnasium.make("SweepMarblesFOPixelsDense-v0", render_mode="rgb_array")
+    # import imageio
+    # for i in range(1):
+    #     video = []
+    #     obs, _ = env.reset()
+    #     img = []
+    #     for k, v in obs.items():
+    #         if k != "sweeper_state":
+    #             img.append(v)
+    #     img = np.concatenate(img, axis=1)
+    #     video.append(img)
+    #     done = False
+    #     i = 0
+    #     while not done:
+    #         obs, rew, term, trunc, info = env.step([0.4,0])
+    #         img = []
+    #         for k, v in obs.items():
+    #             if k != "sweeper_state":
+    #                 img.append(v)
+    #         video.append(np.concatenate(img, axis=1))
+    #         i += 1
+    #         done = term or trunc
+    #         if i > 50:
+    #             break
+    #     imageio.mimsave("test.gif", video, fps=10)

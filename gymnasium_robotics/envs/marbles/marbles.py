@@ -52,7 +52,7 @@ class SweepMarblesEnv(MujocoEnv):
             elif self.pixel_ob == "pixels":
                 _observation_space = {
                     "sweeper_state": spaces.Box(
-                        low=-np.inf, high=np.inf, shape=(7,), dtype=np.float64
+                        low=-np.inf, high=np.inf, shape=(4,), dtype=np.float64
                     ),
                     "initial_view": spaces.Box(
                         low=0, high=255, shape=(64,64,3), dtype=np.uint8
@@ -65,7 +65,7 @@ class SweepMarblesEnv(MujocoEnv):
             elif self.pixel_ob == "depth":
                 _observation_space = {
                     "sweeper_state": spaces.Box(
-                        low=-np.inf, high=np.inf, shape=(7,), dtype=np.float64
+                        low=-np.inf, high=np.inf, shape=(4,), dtype=np.float64
                     ),
                     "initial_view": spaces.Box(
                         low=0, high=255, shape=(64,64,1), dtype=np.float64
@@ -87,7 +87,7 @@ class SweepMarblesEnv(MujocoEnv):
             elif self.pixel_ob == "pixels":
                 _observation_space = {
                     "sweeper_state": spaces.Box(
-                        low=-np.inf, high=np.inf, shape=(7,), dtype=np.float64
+                        low=-np.inf, high=np.inf, shape=(4,), dtype=np.float64
                     ),
                     "initial_view": spaces.Box(
                         low=0, high=255, shape=(64,64,3), dtype=np.uint8
@@ -103,7 +103,7 @@ class SweepMarblesEnv(MujocoEnv):
             elif self.pixel_ob == "depth":
                 _observation_space = {
                     "sweeper_state": spaces.Box(
-                        low=-np.inf, high=np.inf, shape=(7,), dtype=np.float64
+                        low=-np.inf, high=np.inf, shape=(4,), dtype=np.float64
                     ),
                     "initial_view": spaces.Box(
                         low=0, high=255, shape=(64,64,3), dtype=np.float64

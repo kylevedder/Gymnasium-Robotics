@@ -126,8 +126,8 @@ class SweepMarblesEnv(MujocoEnv):
         )
 
     def reset_model(self) -> np.ndarray:
-        marble_x_noise = np.random.uniform(-0.005, 0.005)
-        marble_y_noise = np.random.uniform(-0.05, 0.05)
+        marble_x_noise = np.random.uniform(-0.05, 0.05)
+        marble_y_noise = np.random.uniform(-0.005, 0.005)
         if self.pixel_ob in {"depth", "pixels"}:
             # first render the initial view where the sweeper is out of the image
             qpos = np.array([-10., 0., 0., 0.2, 0.42, 1. ,0., 0., 0.])

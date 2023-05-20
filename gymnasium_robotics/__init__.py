@@ -1376,6 +1376,20 @@ def register_robotics_envs():
         max_episode_steps=1000,
     )
 
+    # ------ IndicatorBoxBlock from Robosuite ------
+    for observation_mode in ["FO", "PO"]:
+        register(
+            id=f"{observation_mode}IndicatorBoxBlock-v0",
+            entry_point="gymnasium_robotics.envs.occluded_manipulation.indicator_box_block:GymIndicatorBoxBlock",
+            max_episode_steps=100,
+            # disable_env_checker=True,
+            kwargs={
+                "views": ["agentview", "sideview"] if observation_mode == "FO" else ["agentview"],
+                "width": 64,
+                "height": 64,
+            },
+        )
+
 
 __version__ = "1.2.1"
 

@@ -538,7 +538,8 @@ class GymIndicatorBoxBlock(IndicatorBoxBlock, gym.Env):
         output = {}
         for k in ob_dict.keys():
             if k in self.observation_keys:
-                output[k] = ob_dict[k]
+                dtype = np.float32 if ob_dict[k].dtype == np.float64 else ob_dict[k].dtype
+                output[k] = ob_dict[k].astype(dtype)
         return output, {}
 
     def step(self, action):
@@ -561,7 +562,8 @@ class GymIndicatorBoxBlock(IndicatorBoxBlock, gym.Env):
         output = {}
         for k in ob_dict.keys():
             if k in self.observation_keys:
-                output[k] = ob_dict[k]
+                dtype = np.float32 if ob_dict[k].dtype == np.float64 else ob_dict[k].dtype
+                output[k] = ob_dict[k].astype(dtype)
         return output, reward, terminated, False, info
 
     def render(self):

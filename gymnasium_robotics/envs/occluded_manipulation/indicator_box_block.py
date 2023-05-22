@@ -8,7 +8,6 @@ from robosuite.utils.mjcf_utils import CustomMaterial
 from robosuite.utils.observables import Observable, sensor
 from robosuite.utils.placement_samplers import UniformRandomSampler
 from robosuite.utils.transform_utils import convert_quat
-from robosuite.wrappers import Wrapper
 
 from gymnasium_robotics.envs.occluded_manipulation.blocked_table import (
     BlockedTableArena as TableArena,
@@ -147,11 +146,11 @@ class IndicatorBoxBlock(SingleArmEnv):
         control_freq=20,
         horizon=1000,
         ignore_done=False,
-        hard_reset=True,
+        hard_reset=False,
         camera_names="agentview",
         camera_heights=256,
         camera_widths=256,
-        camera_depths=False,
+        camera_depths=True,
     ):
 
         # settings for table top
@@ -307,7 +306,8 @@ class IndicatorBoxBlock(SingleArmEnv):
                 name="ObjectSampler",
                 mujoco_objects=self.cube,
                 x_range=[0, 0], #used to be 0.005
-                y_range=[-0.17, 0.17], #used to be 0.18
+                # y_range=[-0.17, 0.17], #used to be 0.18
+                y_range=[-0.1, 0.1], #used to be 0.18
                 rotation=None,
                 ensure_object_boundary_in_range=False,
                 ensure_valid_placement=True,
@@ -493,10 +493,9 @@ class GymIndicatorBoxBlock(IndicatorBoxBlock, gym.Env):
             camera_widths=height
         )
         # observables we want to keep
-        # import ipdb; ipdb.set_trace()
         self.observation_keys = {"robot0_eef_pos","robot0_gripper_qpos","gripper_force", "object_sound"}
         for v in views:
-            self.observation_keys.add(f"{v}_image")
+            self.observation_keys.add(f"{v}_depth")
 
         for active_obs in self.active_observables:
             if active_obs not in self.observation_keys:
@@ -565,7 +564,6 @@ class GymIndicatorBoxBlock(IndicatorBoxBlock, gym.Env):
                 dtype = np.float32 if ob_dict[k].dtype == np.float64 else ob_dict[k].dtype
                 output[k] = ob_dict[k].astype(dtype)
         return output, reward, terminated, False, info
-
     def render(self):
         return super().render()
     
@@ -577,7 +575,15 @@ if __name__ == "__main__":
     import gymnasium
 
     env = gymnasium.make("FOIndicatorBoxBlock-v0")
-    import ipdb; ipdb.set_trace()
+    imgs = []
+    obs = env.reset()[0]
+    imgs.append(np.concatenate([obs["sideview_image"], obs["agentview_image"]], axis=1))
+    for i in range(15):
+        obs, *_ = env.step(np.array([1, 0, 0, 0]))
+        print(i, obs["object-state"][:3][0], obs["robot0_eef_pos"][0])
+        imgs.append(np.concatenate([obs["sideview_image"], obs["agentview_image"]], axis=1))
+    import imageio
+    imageio.mimwrite("test.gif", imgs, fps=10)
     # env = GymIndicatorBoxBlock()
     # import ipdb; ipdb.set_trace()
     # import robosuite.macros as macros

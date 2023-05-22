@@ -490,12 +490,14 @@ class GymIndicatorBoxBlock(IndicatorBoxBlock, gym.Env):
             horizon = 100,
             camera_names=views,
             camera_heights=width,
-            camera_widths=height
+            camera_widths=height,
+            camera_depths=True,
         )
         # observables we want to keep
         self.observation_keys = {"robot0_eef_pos","robot0_gripper_qpos","gripper_force", "object_sound"}
         for v in views:
             self.observation_keys.add(f"{v}_depth")
+            self.observation_keys.add(f"{v}_image")
 
         for active_obs in self.active_observables:
             if active_obs not in self.observation_keys:
@@ -577,13 +579,23 @@ if __name__ == "__main__":
     env = gymnasium.make("FOIndicatorBoxBlock-v0")
     imgs = []
     obs = env.reset()[0]
-    imgs.append(np.concatenate([obs["sideview_image"], obs["agentview_image"]], axis=1))
-    for i in range(15):
-        obs, *_ = env.step(np.array([1, 0, 0, 0]))
-        print(i, obs["object-state"][:3][0], obs["robot0_eef_pos"][0])
-        imgs.append(np.concatenate([obs["sideview_image"], obs["agentview_image"]], axis=1))
+    depth = obs["sideview_depth"]
+    # convert depth to rgb. it's already normalized to [0, 1]
+    depth = np.repeat(depth, 3, axis=2)
+    # convert depth to 0-255 uint8
+    depth = (depth * 255).astype(np.uint8)
     import imageio
-    imageio.mimwrite("test.gif", imgs, fps=10)
+    imageio.imwrite("test.png", depth)
+
+
+    # import ipdb; ipdb.set_trace()
+    # imgs.append(np.concatenate([obs["sideview_image"], obs["agentview_image"]], axis=1))
+    # for i in range(15):
+    #     obs, *_ = env.step(np.array([1, 0, 0, 0]))
+    #     print(i, obs["object-state"][:3][0], obs["robot0_eef_pos"][0])
+    #     imgs.append(np.concatenate([obs["sideview_image"], obs["agentview_image"]], axis=1))
+    # import imageio
+    # imageio.mimwrite("test.gif", imgs, fps=10)
     # env = GymIndicatorBoxBlock()
     # import ipdb; ipdb.set_trace()
     # import robosuite.macros as macros

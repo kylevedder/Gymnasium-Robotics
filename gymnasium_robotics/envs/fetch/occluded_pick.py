@@ -77,8 +77,8 @@ class FetchOccludedPickEnv(MujocoFetchEnv, EzPickle):
         # Randomize start position of object.
         if self.has_object:
             object_xpos = [1.33, 0.75]
-            # y_offset = self.np_random.uniform(-self.obj_range, self.obj_range)
-            # object_xpos[1] += y_offset
+            y_offset = self.np_random.uniform(-self.obj_range, self.obj_range)
+            object_xpos[1] += y_offset
             object_qpos = self._utils.get_joint_qpos(
                 self.model, self.data, "object0:joint"
             )

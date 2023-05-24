@@ -1400,6 +1400,7 @@ def register_robotics_envs():
                 "camera_names": ["external_camera_0", "behind_camera"] if observation_mode == "FO" else ["external_camera_0"],
                 "width": 64,
                 "height": 64,
+                "render_mode": "rgb_array",
             },
         )
 

@@ -15,6 +15,8 @@ MODEL_XML_PATH = os.path.join("fetch", "occluded_pick.xml")
 
 
 class FetchOccludedPickEnv(MujocoFetchEnv, EzPickle):
+    metadata = {"render_modes": ["rgb_array"], 'render_fps': 25}
+    render_mode = "rgb_array"
     def __init__(self, camera_names=None, reward_type="sparse", **kwargs):
         initial_qpos = {
             "robot0:slide0": 0.405,
@@ -56,7 +58,7 @@ class FetchOccludedPickEnv(MujocoFetchEnv, EzPickle):
                     0, 255, shape=(self.height, self.width, 3), dtype="uint8"
                 )
         _obs_space["robot_state"] = spaces.Box(-np.inf, np.inf, shape=(10,), dtype="float32")
-        _obs_space["touch"] = spaces.Box(-np.inf, np.inf, shape=(6,), dtype="float32")
+        _obs_space["touch"] = spaces.Box(-np.inf, np.inf, shape=(2,), dtype="float32")
 
         self.observation_space = spaces.Dict(_obs_space)
         EzPickle.__init__(self, camera_names=camera_names, image_size=32, reward_type=reward_type, **kwargs)

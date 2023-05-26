@@ -1390,7 +1390,7 @@ def register_robotics_envs():
         )
 
     # ------ OccludedPick ------
-    for observation_mode in ["FO", "PO"]:
+    for observation_mode in ["FO", "PO", "DepthFO", "DepthPO"]:
         register(
             id=f"{observation_mode}OccludedPick-v0",
             entry_point="gymnasium_robotics.envs.fetch.occluded_pick:FetchOccludedPickEnv",
@@ -1400,7 +1400,7 @@ def register_robotics_envs():
                 "camera_names": ["external_camera_0", "behind_camera"] if observation_mode == "FO" else ["external_camera_0"],
                 "width": 64,
                 "height": 64,
-                "render_mode": "rgb_array",
+                "render_mode": "depth_array" if "depth" in observation_mode.lower() else "rgb_array",
             },
         )
 

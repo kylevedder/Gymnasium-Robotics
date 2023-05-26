@@ -15,7 +15,7 @@ MODEL_XML_PATH = os.path.join("fetch", "occluded_pick.xml")
 
 
 class FetchOccludedPickEnv(MujocoFetchEnv, EzPickle):
-    metadata = {"render_modes": ["rgb_array"], 'render_fps': 25}
+    metadata = {"render_modes": ["rgb_array", "depth_array"], 'render_fps': 25}
     render_mode = "rgb_array"
     def __init__(self, camera_names=None, reward_type="sparse", **kwargs):
         initial_qpos = {
@@ -53,9 +53,11 @@ class FetchOccludedPickEnv(MujocoFetchEnv, EzPickle):
         # consists of images and proprioception.
         _obs_space = {}
         if isinstance(camera_names, list) and len(camera_names) > 0:
+            obs_shape = (self.height, self.width, 1) if self.render_mode == "depth_array" else \
+                        (self.height, self.width, 3)
             for c in camera_names:
                 _obs_space[c] = spaces.Box(
-                    0, 255, shape=(self.height, self.width, 3), dtype="uint8"
+                    0, 255, shape=obs_shape, dtype="uint8"
                 )
         _obs_space["robot_state"] = spaces.Box(-np.inf, np.inf, shape=(10,), dtype="float32")
         _obs_space["touch"] = spaces.Box(-np.inf, np.inf, shape=(2,), dtype="float32")
@@ -107,7 +109,7 @@ class FetchOccludedPickEnv(MujocoFetchEnv, EzPickle):
             self._render_callback()
             for c in self.camera_names:
                 img = self.mujoco_renderer.render(self.render_mode, camera_name=c)
-                obs[c] = img
+                obs[c] = img[:,:,None] if self.render_mode == 'depth_array' else img
 
             touch_left_finger = False
             touch_right_finger = False
@@ -152,7 +154,9 @@ class FetchOccludedPickEnv(MujocoFetchEnv, EzPickle):
             # BaseRobotEnv has called _get_obs to determine observation space dims but mujoco renderer has not been initialized yet.
             # in this case, return an obs dict with arbitrary values for each ey
             # since observation space will be overwritten later.
-            img = np.zeros((self.height, self.width, 3), dtype=np.uint8)
+            img_shape = (self.height, self.width, 1) if self.render_mode == "depth_array" else \
+                        (self.height, self.width, 3)
+            img = np.zeros(img_shape, dtype=np.uint8)
             obs["achieved_goal"] = obs["observation"] = img
         return obs
 

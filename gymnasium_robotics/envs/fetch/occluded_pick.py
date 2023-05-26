@@ -53,12 +53,13 @@ class FetchOccludedPickEnv(MujocoFetchEnv, EzPickle):
         # consists of images and proprioception.
         _obs_space = {}
         if isinstance(camera_names, list) and len(camera_names) > 0:
-            obs_shape = (self.height, self.width, 1) if self.render_mode == "depth_array" else \
-                        (self.height, self.width, 3)
             for c in camera_names:
                 _obs_space[c] = spaces.Box(
-                    0, 255, shape=obs_shape, dtype="uint8"
-                )
+                        0, 255, shape=(self.height, self.width, 3), dtype="uint8"
+                    ) if self.render_mode == "rgb_array" else \
+                    spaces.Box(
+                        0, np.inf, shape=(self.height, self.width, 1), dtype="float32"
+                    )
         _obs_space["robot_state"] = spaces.Box(-np.inf, np.inf, shape=(10,), dtype="float32")
         _obs_space["touch"] = spaces.Box(-np.inf, np.inf, shape=(2,), dtype="float32")
 
@@ -154,9 +155,8 @@ class FetchOccludedPickEnv(MujocoFetchEnv, EzPickle):
             # BaseRobotEnv has called _get_obs to determine observation space dims but mujoco renderer has not been initialized yet.
             # in this case, return an obs dict with arbitrary values for each ey
             # since observation space will be overwritten later.
-            img_shape = (self.height, self.width, 1) if self.render_mode == "depth_array" else \
-                        (self.height, self.width, 3)
-            img = np.zeros(img_shape, dtype=np.uint8)
+            img = np.zeros((self.height, self.width, 3), dtype=np.uint8) if self.render_mode == "rgb_array" \
+                else np.zeros((self.height, self.width, 1), dtype=np.float32)
             obs["achieved_goal"] = obs["observation"] = img
         return obs
 

@@ -1397,7 +1397,21 @@ def register_robotics_envs():
             max_episode_steps=100,
             disable_env_checker=True,
             kwargs={
-                "camera_names": ["external_camera_0", "behind_camera"] if observation_mode == "FO" else ["external_camera_0"],
+                "camera_names": ["external_camera_0", "behind_camera"] if "FO" in observation_mode else ["external_camera_0"],
+                "width": 64,
+                "height": 64,
+                "render_mode": "depth_array" if "depth" in observation_mode.lower() else "rgb_array",
+            },
+        )
+
+    for observation_mode in ["FO", "PO", "DepthFO", "DepthPO"]:
+        register(
+            id=f"{observation_mode}OccludedPickPlace-v0",
+            entry_point="gymnasium_robotics.envs.fetch.occluded_pick_place:FetchOccludedPickPlaceEnv",
+            max_episode_steps=100,
+            disable_env_checker=True,
+            kwargs={
+                "camera_names": ["external_camera_0", "behind_camera"] if "FO" in observation_mode else ["external_camera_0"],
                 "width": 64,
                 "height": 64,
                 "render_mode": "depth_array" if "depth" in observation_mode.lower() else "rgb_array",

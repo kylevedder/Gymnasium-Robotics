@@ -25,8 +25,8 @@ class FetchOccludedPickPlaceEnv(MujocoFetchEnv, EzPickle):
             'object0:joint': [1.33, 0.75, 0.42, 1., 0., 0., 0.],
         }
         self.camera_names = camera_names
-        workspace_min=np.array([1.25, 0.4, 0.42])
-        workspace_max=np.array([1.36, 0.86, 0.7])
+        workspace_min=np.array([1.3, 0.64, 0.42])
+        workspace_max=np.array([1.47, 0.86, 0.7])
 
         self.workspace_min = workspace_min
         self.workspace_max = workspace_max
@@ -67,9 +67,12 @@ class FetchOccludedPickPlaceEnv(MujocoFetchEnv, EzPickle):
         EzPickle.__init__(self, camera_names=camera_names, image_size=32, reward_type=reward_type, **kwargs)
 
     def _sample_goal(self):
-        bin_xpos = np.array([1.3, 0.49, 0.4])
-        xy_offset = self.np_random.uniform(-self.target_range, self.target_range, size=2)
-        bin_xpos[:2] += xy_offset
+        # bin_xpos = np.array([1.3, 0.49, 0.4])
+        # xy_offset = self.np_random.uniform(-self.target_range, self.target_range, size=2)
+        # bin_xpos[:2] += xy_offset
+        bin_xpos = np.array([1.45, 0.75, 0.59])
+        y_offset = self.np_random.uniform(-self.target_range, self.target_range)
+        bin_xpos[1] += y_offset
         return bin_xpos + np.array([0, 0, 0.025])
 
     def _reset_sim(self):
@@ -246,53 +249,70 @@ class FetchOccludedPickPlaceEnv(MujocoFetchEnv, EzPickle):
 
 
 if __name__ == "__main__":
-    import gymnasium
-    env = gymnasium.make("DepthFOOccludedPickPlace-v0")
-    obs, _ = env.reset()
-    import ipdb; ipdb.set_trace()
-    env = FetchOccludedPickPlaceEnv(["external_camera_0", "behind_camera"], "dense", render_mode="rgb_array", width=64, height=64)
+    # import gymnasium
+    # env = gymnasium.make("DepthFOOccludedPickPlace-v0")
+    # obs, _ = env.reset()
+    # import ipdb; ipdb.set_trace()
+    env = FetchOccludedPickPlaceEnv(["external_camera_0", "behind_camera"], "dense", render_mode="human", width=64, height=64)
+    while True:
+        env.reset()
     imgs = []
-    for i in range(10):
-        obs, _ = env.reset()
+    # for i in range(10):
+    #     obs, _ = env.reset()
+    #     img = np.concatenate([obs["external_camera_0"], obs["behind_camera"]], axis=1)
+    #     imgs.append(img)
+    # import imageio 
+    # imageio.mimwrite("test.gif", imgs)
+    for i in range(1):
+        obs = env.reset()[0]
         img = np.concatenate([obs["external_camera_0"], obs["behind_camera"]], axis=1)
-        imgs.append(img)
-    import imageio 
-    imageio.mimwrite("test.gif", imgs)
+
 
         # open the gripper and descend
-        # for i in range(10):
-        #     obs, rew, term, trunc, info = env.step(np.array([0,0,-0.4, 1.0]))
-        #     print(rew)
-        # # close gripper
-        # for i in range(10):
-        #     obs, rew, term, trunc, info= env.step(np.array([0,0,0.0,-1.0]))
-        #     print(rew)
-        # # lift up cube
-        # for i in range(5):
-        #     obs, rew, term, trunc, info = env.step(np.array([0,0,1.0,-1.0]))
-        #     print(rew)
-        # # move cube to the left and above bin
-        # for i in range(8):
-        #     obs, rew, term, trunc, info = env.step(np.array([-0.1,-1.0,0,-1.0]))
-        #     print(rew)
-        #     if term:
-        #         break
-        # # lower cube into bin
-        # for i in range(3):
-        #     obs, rew, term, trunc, info = env.step(np.array([0,0,-1,-1.0]))
-        #     print(rew)
-        #     if term:
-        #         break
-        # # open gripper
-        # for i in range(4):
-        #     obs, rew, term, trunc, info = env.step(np.array([0,0,0,1.0]))
-        #     print(rew)
-        #     if term:
-        #         print('success')
-        #         break
+        for i in range(10):
+            obs, rew, term, trunc, info = env.step(np.array([0,0,-0.4, 1.0]))
+            img = np.concatenate([obs["external_camera_0"], obs["behind_camera"]], axis=1)
+            imgs.append(img)
+            # print(rew)
+        # close gripper
+        for i in range(10):
+            obs, rew, term, trunc, info= env.step(np.array([0,0,0.0,-1.0]))
+            img = np.concatenate([obs["external_camera_0"], obs["behind_camera"]], axis=1)
+            imgs.append(img)
+            # print(rew)
+        # lift up cube
+        for i in range(10):
+            obs, rew, term, trunc, info = env.step(np.array([0,0,1.0,-1.0]))
+            img = np.concatenate([obs["external_camera_0"], obs["behind_camera"]], axis=1)
+            imgs.append(img)
+            # print(rew)
+        # move cube over bin
+        for i in range(3):
+            obs, rew, term, trunc, info = env.step(np.array([1.0,0,0.0,-1.0]))
+            img = np.concatenate([obs["external_camera_0"], obs["behind_camera"]], axis=1)
+            imgs.append(img)
+            print(obs['robot_state'][:3])
+            # print(rew)
+        # lower cube into bin
+        for i in range(3):
+            obs, rew, term, trunc, info = env.step(np.array([0,0,-1,-1.0]))
+            img = np.concatenate([obs["external_camera_0"], obs["behind_camera"]], axis=1)
+            imgs.append(img)
+            # print(rew)
+            if term:
+                break
+        # open gripper
+        for i in range(4):
+            obs, rew, term, trunc, info = env.step(np.array([0,0,0,1.0]))
+            img = np.concatenate([obs["external_camera_0"], obs["behind_camera"]], axis=1)
+            imgs.append(img)
+            # print(rew)
+            if term:
+                print('success')
+                break
     
+    import imageio; imageio.mimwrite("test.gif", imgs)
     import ipdb; ipdb.set_trace()
-
 
     imgs = []
     import imageio

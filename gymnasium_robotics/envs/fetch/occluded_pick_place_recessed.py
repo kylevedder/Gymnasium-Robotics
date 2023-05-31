@@ -11,12 +11,11 @@ from gymnasium.utils.ezpickle import EzPickle
 from gymnasium_robotics.envs.fetch import MujocoFetchEnv, goal_distance
 
 # Ensure we get the path separator correct on windows
-MODEL_XML_PATH = os.path.join("fetch", "occluded_pick_place.xml")
+MODEL_XML_PATH = os.path.join("fetch", "occluded_pick_place_recessed.xml")
 
 
-class FetchOccludedPickPlaceEnv(MujocoFetchEnv, EzPickle):
+class FetchOccludedPickPlaceRecessedEnv(MujocoFetchEnv, EzPickle):
     metadata = {"render_modes": ["rgb_array", "depth_array"], 'render_fps': 25}
-    render_mode = "rgb_array"
     def __init__(self, camera_names=[], reward_type="sparse", **kwargs):
         initial_qpos = {
             "robot0:slide0": 0.405,
@@ -66,14 +65,8 @@ class FetchOccludedPickPlaceEnv(MujocoFetchEnv, EzPickle):
         self.observation_space = spaces.Dict(_obs_space)
         EzPickle.__init__(self, camera_names=camera_names, image_size=32, reward_type=reward_type, **kwargs)
 
-    def _sample_goal(self):
-        # bin_xpos = np.array([1.3, 0.49, 0.4])
-        # xy_offset = self.np_random.uniform(-self.target_range, self.target_range, size=2)
-        # bin_xpos[:2] += xy_offset
-        bin_xpos = np.array([1.45, 0.75, 0.59])
-        y_offset = self.np_random.uniform(-self.target_range, self.target_range)
-        bin_xpos[1] += y_offset
-        return bin_xpos + np.array([0, 0, 0.025])
+    def _sample_goal(self):  # Currently constant goal, no randomization
+        return self._utils.get_site_xpos(self.model, self.data, "recesscenter")
 
     def _reset_sim(self):
         self.data.time = self.initial_time
@@ -231,10 +224,6 @@ class FetchOccludedPickPlaceEnv(MujocoFetchEnv, EzPickle):
         while not did_reset_sim:
             did_reset_sim = self._reset_sim()
         self.goal = self._sample_goal()
-        body_id = self._mujoco.mj_name2id(
-            self.model, self._mujoco.mjtObj.mjOBJ_BODY, "bin1"
-        )
-        self.model.body_pos[body_id] = self.goal.copy() - np.array([0, 0, 0.025])
         self._mujoco.mj_forward(self.model, self.data)
 
         obs = self._get_obs()
@@ -249,111 +238,13 @@ class FetchOccludedPickPlaceEnv(MujocoFetchEnv, EzPickle):
 
 
 if __name__ == "__main__":
-    # import gymnasium
-    # env = gymnasium.make("DepthFOOccludedPickPlace-v0")
-    # obs, _ = env.reset()
-    # import ipdb; ipdb.set_trace()
-    env = FetchOccludedPickPlaceEnv(["external_camera_0", "behind_camera"], "dense", render_mode="human", width=64, height=64)
+    env = FetchOccludedPickPlaceRecessedEnv(["external_camera_0", "behind_camera"], "dense", render_mode="human", width=64, height=64)
     while True:
         env.reset()
-    imgs = []
+    # imgs = []
     # for i in range(10):
     #     obs, _ = env.reset()
     #     img = np.concatenate([obs["external_camera_0"], obs["behind_camera"]], axis=1)
     #     imgs.append(img)
     # import imageio 
     # imageio.mimwrite("test.gif", imgs)
-    for i in range(1):
-        obs = env.reset()[0]
-        img = np.concatenate([obs["external_camera_0"], obs["behind_camera"]], axis=1)
-
-
-        # open the gripper and descend
-        for i in range(10):
-            obs, rew, term, trunc, info = env.step(np.array([0,0,-0.4, 1.0]))
-            img = np.concatenate([obs["external_camera_0"], obs["behind_camera"]], axis=1)
-            imgs.append(img)
-            # print(rew)
-        # close gripper
-        for i in range(10):
-            obs, rew, term, trunc, info= env.step(np.array([0,0,0.0,-1.0]))
-            img = np.concatenate([obs["external_camera_0"], obs["behind_camera"]], axis=1)
-            imgs.append(img)
-            # print(rew)
-        # lift up cube
-        for i in range(10):
-            obs, rew, term, trunc, info = env.step(np.array([0,0,1.0,-1.0]))
-            img = np.concatenate([obs["external_camera_0"], obs["behind_camera"]], axis=1)
-            imgs.append(img)
-            # print(rew)
-        # move cube over bin
-        for i in range(3):
-            obs, rew, term, trunc, info = env.step(np.array([1.0,0,0.0,-1.0]))
-            img = np.concatenate([obs["external_camera_0"], obs["behind_camera"]], axis=1)
-            imgs.append(img)
-            print(obs['robot_state'][:3])
-            # print(rew)
-        # lower cube into bin
-        for i in range(3):
-            obs, rew, term, trunc, info = env.step(np.array([0,0,-1,-1.0]))
-            img = np.concatenate([obs["external_camera_0"], obs["behind_camera"]], axis=1)
-            imgs.append(img)
-            # print(rew)
-            if term:
-                break
-        # open gripper
-        for i in range(4):
-            obs, rew, term, trunc, info = env.step(np.array([0,0,0,1.0]))
-            img = np.concatenate([obs["external_camera_0"], obs["behind_camera"]], axis=1)
-            imgs.append(img)
-            # print(rew)
-            if term:
-                print('success')
-                break
-    
-    import imageio; imageio.mimwrite("test.gif", imgs)
-    import ipdb; ipdb.set_trace()
-
-    imgs = []
-    import imageio
-    obs, _ = env.reset()
-    for i in range(1000):
-        obs, _ = env.step(env.action_space.sample())
-
-    import ipdb; ipdb.set_trace()
-    imgs.append(obs["external_camera_0"])
-    imageio.mimwrite("test.gif", imgs)
-        # env.step(np.array([0, 0, 1, 0]))
-        # env.render()
-    # for i in range(1):
-    #     obs, _ = env.reset()
-    #     env.render()
-    #     # go to the first corner
-    #     returns = 0
-    #     for i in range(7):
-    #         obs, rew, trunc, term, info =  env.step(np.array([-0.2, 0.2, 0, 0]))
-    #         # env.render()
-    #         print(f"step {i}", rew, info['is_success'], obs[6:9])
-    #         returns += rew
-
-    #     # go to the 2nd corner
-    #     for i in range(7):
-    #         obs, rew, trunc, term, info =  env.step(np.array([0, -1., 0, 0]))
-    #         # env.render()
-    #         print(f"step {i}", rew, info['is_success'], obs[6:9])
-    #         returns += rew
-
-    #     # go to the 3rd corner
-    #     for i in range(7):
-    #         obs, rew, trunc, term, info =  env.step(np.array([1, 0., 0, 0]))
-    #         # env.render()
-    #         print(f"step {i}", rew, info['is_success'], obs[6:9])
-    #         returns += rew
-
-    #     # go to the 4th corner
-    #     for i in range(7):
-    #         obs, rew, trunc, term, info =  env.step(np.array([0, 1, 0, 0]))
-    #         # env.render()
-    #         print(f"step {i}", rew, info['is_success'], obs[6:9])
-    #         returns += rew
-    #     print("return", returns)

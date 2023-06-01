@@ -16,7 +16,7 @@ MODEL_XML_PATH = os.path.join("fetch", "occluded_pick_place_recessed.xml")
 
 class FetchOccludedPickPlaceRecessedEnv(MujocoFetchEnv, EzPickle):
     metadata = {"render_modes": ["rgb_array", "depth_array"], 'render_fps': 25}
-    def __init__(self, camera_names=[], reward_type="sparse", **kwargs):
+    def __init__(self, camera_names=[], reward_type="sparse", obj_grip_rew_weight=0.1, obj_goal_rew_weight=1.0, **kwargs):
         initial_qpos = {
             "robot0:slide0": 0.405,
             "robot0:slide1": 0.48,
@@ -24,17 +24,18 @@ class FetchOccludedPickPlaceRecessedEnv(MujocoFetchEnv, EzPickle):
             'object0:joint': [1.33, 0.75, 0.42, 1., 0., 0., 0.],
         }
         self.camera_names = camera_names
-        workspace_min=np.array([1.3, 0.64, 0.42])
-        workspace_max=np.array([1.47, 0.86, 0.7])
-
+        workspace_min=np.array([1.3, 0.35, 0.42])
+        workspace_max=np.array([1.47, 1.15, 0.7])
         self.workspace_min = workspace_min
         self.workspace_max = workspace_max
         self.initial_qpos = initial_qpos
+        self.obj_grip_rew_weight = obj_grip_rew_weight
+        self.obj_goal_rew_weight = obj_goal_rew_weight
         MujocoFetchEnv.__init__(
             self,
             model_path=MODEL_XML_PATH,
             has_object=True,
-            block_gripper=False,
+            block_gripper=True,
             n_substeps=20,
             gripper_extra_height=0.2,
             target_in_the_air=False,
@@ -177,7 +178,7 @@ class FetchOccludedPickPlaceRecessedEnv(MujocoFetchEnv, EzPickle):
 
         # if object xy is within 0.04m and z is within 0.02m, then terminate
         xy_dist = goal_distance(obj0_pos[:2], self.goal[:2])
-        xy_success = goal_distance(obj0_pos[:2], self.goal[:2]) < 0.04 
+        xy_success = xy_dist < 0.04 
         z_dist =  np.abs(obj0_pos[2] - self.goal[2])
         z_success =  np.abs(obj0_pos[2] - self.goal[2]) < 0.02
         terminated = xy_success and z_success
@@ -190,26 +191,19 @@ class FetchOccludedPickPlaceRecessedEnv(MujocoFetchEnv, EzPickle):
         # handled by time limit wrapper.
         truncated = self.compute_truncated(obj0_pos, self.goal, info)
 
-        # reward = self.compute_reward(obj0_pos, self.goal, info)
-        # success bonus
         reward = 0
         if terminated:
-            # print("success phase")
             reward = 300
         else:
-            dist = np.linalg.norm(curr_eef_state - obj0_pos)
-            reaching_reward = 1 - np.tanh(10.0 * dist)
-            reward += reaching_reward
-            # msg = "reaching phase"
+            # object & goal reward
+            dist = goal_distance(obj0_pos, self.goal)
+            obj_goal_rew = self.obj_goal_rew_weight * (1 - np.tanh(10.0 * dist))
+            reward += obj_goal_rew
 
-            # grasping reward
-            if obs["touch"].all():
-                reward += 0.25
-                dist = np.linalg.norm(self.goal - obj0_pos)
-                picking_reward = 1 - np.tanh(10.0 * dist)
-                reward += picking_reward
-                # msg = "picking phase"
-            # print(msg)
+            # gripper & object reward
+            dist = np.linalg.norm(curr_eef_state - obj0_pos)
+            obj_grip_rew = self.obj_grip_rew_weight * (1 - np.tanh(10.0 * dist))
+            reward += obj_grip_rew
 
         return obs, reward, terminated, truncated, info
 
@@ -238,13 +232,18 @@ class FetchOccludedPickPlaceRecessedEnv(MujocoFetchEnv, EzPickle):
 
 
 if __name__ == "__main__":
+    # import gymnasium
+    # env = gymnasium.make("FOOccludedPickPlaceRecessed-v0")
     env = FetchOccludedPickPlaceRecessedEnv(["external_camera_0", "behind_camera"], "dense", render_mode="human", width=64, height=64)
-    while True:
-        env.reset()
-    # imgs = []
-    # for i in range(10):
-    #     obs, _ = env.reset()
-    #     img = np.concatenate([obs["external_camera_0"], obs["behind_camera"]], axis=1)
-    #     imgs.append(img)
-    # import imageio 
-    # imageio.mimwrite("test.gif", imgs)
+    env.reset()
+
+    # Push block in goal
+    obs, _ = env.reset()
+    for i in range(20):
+        obs, rew, term, trunc, info =  env.step(np.array([-0.0, 0.2, -.2, 0]))
+    for i in range(200):
+        obs, rew, term, trunc, info = env.step(np.array([0.0, -0.2, 0.0, 0.0]))
+        if term:
+            print('terminated')
+            break
+    

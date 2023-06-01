@@ -1437,7 +1437,7 @@ def register_robotics_envs():
     for observation_mode in ["FO", "PO", "DepthFO", "DepthPO"]:
         register(
             id=f"{observation_mode}OccludedPickPlaceRecessed2Goal-v0",
-            entry_point="gymnasium_robotics.envs.fetch.occluded_pick_place_recessed:FetchOccludedPickPlaceRecessed2GoalEnv",
+            entry_point="gymnasium_robotics.envs.fetch.occluded_pick_place_recessed_2goal:FetchOccludedPickPlaceRecessed2GoalEnv",
             max_episode_steps=100,
             disable_env_checker=True,
             kwargs={

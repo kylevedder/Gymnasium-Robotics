@@ -31,8 +31,6 @@ class FetchOccludedPickPlaceRecessed2GoalEnv(FetchOccludedPickPlaceRecessedEnv):
         return goal_pos
 
 if __name__ == "__main__":
-    # import gymnasium
-    # env = gymnasium.make("FOOccludedPickPlaceRecessed-v0")
     env = FetchOccludedPickPlaceRecessed2GoalEnv(camera_names=["external_camera_0", "behind_camera"], reward_type="dense", render_mode="human", width=64, height=64)
     obs, _ = env.reset()
     

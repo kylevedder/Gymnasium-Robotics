@@ -36,12 +36,13 @@ if __name__ == "__main__":
     env = FetchOccludedPickPlaceRecessed2GoalEnv(camera_names=["external_camera_0", "behind_camera"], reward_type="dense", render_mode="human", width=64, height=64)
     obs, _ = env.reset()
     
-    # Push block in goal0
+    # Attempt to push block in goal
+    goal_num_mult = 1 if np.allclose(env.goal, np.array([1.3,0.45,0.375]), 0.01) else -1
     obs, _ = env.reset()
     for i in range(20):
-        obs, rew, term, trunc, info =  env.step(np.array([-0.0, 0.2, -.2, 0]))
+        obs, rew, term, trunc, info =  env.step(np.array([0.0, goal_num_mult * 0.2, -.2, 0]))
     for i in range(200):
-        obs, rew, term, trunc, info = env.step(np.array([0.0, -0.2, 0.0, 0.0]))
+        obs, rew, term, trunc, info = env.step(np.array([0.0, goal_num_mult * -0.2, 0.0, 0.0]))
         if term:
             print('terminated')
             break

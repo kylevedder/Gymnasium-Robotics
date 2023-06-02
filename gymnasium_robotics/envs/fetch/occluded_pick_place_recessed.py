@@ -16,7 +16,7 @@ MODEL_XML_PATH = os.path.join("fetch", "occluded_pick_place_recessed.xml")
 
 class FetchOccludedPickPlaceRecessedEnv(MujocoFetchEnv, EzPickle):
     metadata = {"render_modes": ["rgb_array", "depth_array"], 'render_fps': 25}
-    def __init__(self, camera_names=[], reward_type="sparse", obj_grip_rew_weight=0.1, obj_goal_rew_weight=1.0, model_xml_path=MODEL_XML_PATH, **kwargs):
+    def __init__(self, camera_names=[], reward_type="sparse", obj_grip_rew_weight=0.1, obj_goal_rew_weight=1.0, obj_range=0.05, model_xml_path=MODEL_XML_PATH, **kwargs):
         initial_qpos = {
             "robot0:slide0": 0.405,
             "robot0:slide1": 0.48,
@@ -40,7 +40,7 @@ class FetchOccludedPickPlaceRecessedEnv(MujocoFetchEnv, EzPickle):
             gripper_extra_height=0.2,
             target_in_the_air=False,
             target_offset=0.0,
-            obj_range=0.1,
+            obj_range=obj_range,
             target_range=0.05,
             distance_threshold=0.05,
             initial_qpos=initial_qpos,

@@ -14,7 +14,7 @@ MODEL_XML_PATH = os.path.join("fetch", "occluded_pick_place_recessed_2goal.xml")
 
 class FetchOccludedPickPlaceRecessed2GoalEnv(FetchOccludedPickPlaceRecessedEnv):
     def __init__(self, **kwargs):
-        super().__init__(model_xml_path=MODEL_XML_PATH, **kwargs)
+        super().__init__(obj_range=0.1, model_xml_path=MODEL_XML_PATH, **kwargs)
         self.goal_indicator_offset = np.array([
             [0.0,-0.075,0.075],  # goal0 offset
             [0.0,0.075,0.075]    # goal1 offset

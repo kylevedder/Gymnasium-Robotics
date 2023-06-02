@@ -234,7 +234,7 @@ class FetchOccludedPickPlaceRecessedEnv(MujocoFetchEnv, EzPickle):
 if __name__ == "__main__":
     # import gymnasium
     # env = gymnasium.make("FOOccludedPickPlaceRecessed-v0")
-    env = FetchOccludedPickPlaceRecessedEnv(["external_camera_0", "behind_camera"], "dense", render_mode="human", width=64, height=64)
+    env = FetchOccludedPickPlaceRecessedEnv(["behind_camera"], "dense", render_mode="human", width=64, height=64)
     env.reset()
 
     # Push block in goal

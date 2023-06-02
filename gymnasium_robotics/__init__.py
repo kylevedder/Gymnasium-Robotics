@@ -1425,7 +1425,7 @@ def register_robotics_envs():
             max_episode_steps=100,
             disable_env_checker=True,
             kwargs={
-                "camera_names": ["external_camera_0", "behind_camera"] if "FO" in observation_mode else ["external_camera_0"],
+                "camera_names": ["behind_camera"] if "FO" in observation_mode else [],
                 "width": 64,
                 "height": 64,
                 "render_mode": "depth_array" if "depth" in observation_mode.lower() else "rgb_array",

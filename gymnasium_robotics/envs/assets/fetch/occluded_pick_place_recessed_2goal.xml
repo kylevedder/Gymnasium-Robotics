@@ -69,7 +69,7 @@
 			<site name="indicator_site" pos="0 0 0" size="0.02 0.1 0.1" rgba="0 0 1 0" type="box"></site>
 		</body>
 
-		<body name="behind_camera_body" pos="0.8 0.75 0.5">
+		<body name="behind_camera_body" pos="0.65 0.75 0.5">
 			<!-- <camera euler="0 0 1.57" fovy="45" name="camera_under" pos="0 0 0"></camera> -->
 			<camera mode="targetbody" target="arenacenter"  fovy="43" name="behind_camera" ></camera>
 			<site name="camera_under_site" pos="0 0 0" size="0.02 0.02 0.02" rgba="0 1 1 1" type="sphere"></site>

@@ -27,20 +27,20 @@
 			<geom size="0.1 0.4 0.025" type="box" mass="2000" material="table_mat"/>
 		</body>
 		<body pos="1.3 0.75 0.375" name="recess_wall_m">
-			<geom size="0.1 0.25 0.025" type="box" mass="2000" material="table_mat"/>
+			<geom size="0.1 0.15 0.025" type="box" mass="2000" material="table_mat"/>
 		</body>
-		<body pos="1.3 0.375 0.375" name="recess_wall_l">
-			<geom size="0.1 0.025 0.025" type="box" mass="2000" material="table_mat"/>
+		<body pos="1.3 0.425 0.375" name="recess_wall_l">
+			<geom size="0.1 0.075 0.025" type="box" mass="2000" material="table_mat"/>
 		</body>
-		<body pos="1.3 1.125 0.375" name="recess_wall_r">
-			<geom size="0.1 0.025 0.025" type="box" mass="2000" material="table_mat"/>
+		<body pos="1.3 1.075 0.375" name="recess_wall_r">
+			<geom size="0.1 0.075 0.025" type="box" mass="2000" material="table_mat"/>
 		</body>
 
 		<!-- Goal Positions -->
-		<body name="recesscenter0" pos="1.3 0.45 0.375">
+		<body name="recesscenter0" pos="1.3 0.55 0.375">
 			<site name="recesscenter0" size="0.02 0.02 0.02" rgba="0.2 0 0 0" type="sphere"/>
 		</body>
-		<body name="recesscenter1" pos="1.3 1.05 0.375">
+		<body name="recesscenter1" pos="1.3 0.95 0.375">
 			<site name="recesscenter1" size="0.02 0.02 0.02" rgba="0 0.2 0 0" type="sphere"/>
 		</body>
 		
@@ -69,7 +69,7 @@
 			<site name="indicator_site" pos="0 0 0" size="0.02 0.1 0.1" rgba="0 0 1 0" type="box"></site>
 		</body>
 
-		<body name="behind_camera_body" pos="0.9 0.7 0.5">
+		<body name="behind_camera_body" pos="0.8 0.75 0.5">
 			<!-- <camera euler="0 0 1.57" fovy="45" name="camera_under" pos="0 0 0"></camera> -->
 			<camera mode="targetbody" target="arenacenter"  fovy="43" name="behind_camera" ></camera>
 			<site name="camera_under_site" pos="0 0 0" size="0.02 0.02 0.02" rgba="0 1 1 1" type="sphere"></site>

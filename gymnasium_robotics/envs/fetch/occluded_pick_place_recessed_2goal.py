@@ -14,7 +14,7 @@ MODEL_XML_PATH = os.path.join("fetch", "occluded_pick_place_recessed_2goal.xml")
 
 class FetchOccludedPickPlaceRecessed2GoalEnv(FetchOccludedPickPlaceRecessedEnv):
     def __init__(self, **kwargs):
-        super().__init__(obj_range=0.1, model_xml_path=MODEL_XML_PATH, **kwargs)
+        super().__init__(obj_range=0.08, model_xml_path=MODEL_XML_PATH, **kwargs)
         self.goal_indicator_offset = np.array([
             [0.0,-0.075,0.075],  # goal0 offset
             [0.0,0.075,0.075]    # goal1 offset
@@ -33,7 +33,17 @@ class FetchOccludedPickPlaceRecessed2GoalEnv(FetchOccludedPickPlaceRecessedEnv):
 if __name__ == "__main__":
     env = FetchOccludedPickPlaceRecessed2GoalEnv(camera_names=["external_camera_0", "behind_camera"], reward_type="dense", render_mode="human", width=64, height=64)
     obs, _ = env.reset()
-    
+    # while True:
+    #     env.reset()
+    # import imageio
+
+    # depth = obs['external_camera_0']
+    # depth -= depth.min()
+    # depth /= 2*depth[depth <= 1].mean()
+    # pixels = 255*np.clip(depth, 0, 1)
+    # pixels = pixels.astype(np.uint8)
+    # imageio.imwrite('file_name.png', pixels[:,:,0])
+
     # Attempt to push block in goal
     goal_num_mult = 1 if np.allclose(env.goal, np.array([1.3,0.45,0.375]), 0.01) else -1
     obs, _ = env.reset()

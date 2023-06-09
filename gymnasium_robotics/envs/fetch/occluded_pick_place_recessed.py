@@ -16,7 +16,7 @@ MODEL_XML_PATH = os.path.join("fetch", "occluded_pick_place_recessed.xml")
 
 class FetchOccludedPickPlaceRecessedEnv(MujocoFetchEnv, EzPickle):
     metadata = {"render_modes": ["rgb_array", "depth_array"], 'render_fps': 25}
-    def __init__(self, camera_names=[], reward_type="sparse", obj_grip_rew_weight=0.1, obj_goal_rew_weight=1.0, **kwargs):
+    def __init__(self, camera_names=[], reward_type="sparse", obj_grip_rew_weight=0.1, obj_goal_rew_weight=1.0, obj_range=0.05, model_xml_path=MODEL_XML_PATH, **kwargs):
         initial_qpos = {
             "robot0:slide0": 0.405,
             "robot0:slide1": 0.48,
@@ -33,14 +33,14 @@ class FetchOccludedPickPlaceRecessedEnv(MujocoFetchEnv, EzPickle):
         self.obj_goal_rew_weight = obj_goal_rew_weight
         MujocoFetchEnv.__init__(
             self,
-            model_path=MODEL_XML_PATH,
+            model_path=model_xml_path,
             has_object=True,
             block_gripper=True,
             n_substeps=20,
             gripper_extra_height=0.2,
             target_in_the_air=False,
             target_offset=0.0,
-            obj_range=0.1,
+            obj_range=obj_range,
             target_range=0.05,
             distance_threshold=0.05,
             initial_qpos=initial_qpos,
@@ -234,7 +234,7 @@ class FetchOccludedPickPlaceRecessedEnv(MujocoFetchEnv, EzPickle):
 if __name__ == "__main__":
     # import gymnasium
     # env = gymnasium.make("FOOccludedPickPlaceRecessed-v0")
-    env = FetchOccludedPickPlaceRecessedEnv(["external_camera_0", "behind_camera"], "dense", render_mode="human", width=64, height=64)
+    env = FetchOccludedPickPlaceRecessedEnv(["behind_camera"], "dense", render_mode="human", width=64, height=64)
     env.reset()
 
     # Push block in goal

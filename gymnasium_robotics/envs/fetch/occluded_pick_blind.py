@@ -192,9 +192,9 @@ class FetchOccludedPickEnv(MujocoFetchEnv, EzPickle):
             # print("success phase")
             reward = 300
         else:
-            dist = np.linalg.norm(curr_eef_state - obj0_pos)
-            reaching_reward = 1 - np.tanh(10.0 * dist)
-            reward += reaching_reward
+            # dist = np.linalg.norm(curr_eef_state - obj0_pos)
+            # reaching_reward = 1 - np.tanh(10.0 * dist)
+            # reward += reaching_reward
             # msg = "reaching phase"
 
             # grasping reward

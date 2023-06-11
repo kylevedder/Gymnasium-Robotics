@@ -24,7 +24,7 @@ class FetchOccludedPickEnv(MujocoFetchEnv, EzPickle):
             "robot0:slide2": 0.0,
             'object0:joint': [1.33, 0.75, 0.42, 1., 0., 0., 0.],
         }
-        self.camera_names = camera_names
+        self.camera_names = camera_names if camera_names is not None else []
         workspace_min=np.array([1.1, 0.44, 0.42])
         workspace_max=np.array([1.5, 1.05, 0.7])
 

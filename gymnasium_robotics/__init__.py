@@ -1407,20 +1407,6 @@ def register_robotics_envs():
     # ------ BlindPick ------
     for observation_mode in ["FO", "PO", "DepthFO", "DepthPO"]:
         register(
-            id=f"{observation_mode}BlindPick-v0",
-            entry_point="gymnasium_robotics.envs.fetch.occluded_pick_blind:FetchOccludedPickEnv",
-            max_episode_steps=100,
-            disable_env_checker=True,
-            kwargs={
-                "camera_names": ["external_camera_0"] if "FO" in observation_mode else None,
-                "width": 64,
-                "height": 64,
-                "render_mode": "depth_array" if "depth" in observation_mode.lower() else "rgb_array",
-            },
-        )
-
-    for observation_mode in ["FO", "PO", "DepthFO", "DepthPO"]:
-        register(
             id=f"{observation_mode}BlindPick-v1",
             entry_point="gymnasium_robotics.envs.fetch.occluded_pick_blind:FetchOccludedPickEnv",
             max_episode_steps=100,

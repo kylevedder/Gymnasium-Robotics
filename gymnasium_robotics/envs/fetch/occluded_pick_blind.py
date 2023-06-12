@@ -17,7 +17,7 @@ MODEL_XML_PATH = os.path.join("fetch", "occluded_pick_blind.xml")
 class FetchOccludedPickEnv(MujocoFetchEnv, EzPickle):
     metadata = {"render_modes": ["rgb_array", "depth_array"], 'render_fps': 25}
     render_mode = "rgb_array"
-    def __init__(self, camera_names=None, reward_type="sparse", **kwargs):
+    def __init__(self, camera_names=None, reward_type="sparse", obj_range=0.2, **kwargs):
         initial_qpos = {
             "robot0:slide0": 0.405,
             "robot0:slide1": 0.48,
@@ -40,7 +40,7 @@ class FetchOccludedPickEnv(MujocoFetchEnv, EzPickle):
             gripper_extra_height=0.2,
             target_in_the_air=False,
             target_offset=0.0,
-            obj_range=0.2,
+            obj_range=obj_range,
             target_range=0.0,
             distance_threshold=0.05,
             initial_qpos=initial_qpos,

@@ -1404,21 +1404,39 @@ def register_robotics_envs():
             },
         )
 
-    # ------ BlindPick ------
+    # ------ Gripper Camera -> 2D Blind Pick ------
     for observation_mode in ["FO", "PO", "DepthFO", "DepthPO"]:
-        register(
-            id=f"{observation_mode}BlindPick-v1",
-            entry_point="gymnasium_robotics.envs.fetch.occluded_pick_blind:FetchOccludedPickEnv",
-            max_episode_steps=100,
-            disable_env_checker=True,
-            kwargs={
-                "camera_names": ["external_camera_0"] if "FO" in observation_mode else None,
-                "width": 64,
-                "height": 64,
-                "render_mode": "depth_array" if "depth" in observation_mode.lower() else "rgb_array",
-                "obj_range": 0.1,
-            },
-        )
+        for difficulty in [0.07, 0.15]:
+            register(
+                id=f"{observation_mode}Gripper2DBlind{int(difficulty*100)}cmPick-v0",
+                entry_point="gymnasium_robotics.envs.fetch.blind_pick:FetchBlindPickEnv",
+                max_episode_steps=100,
+                disable_env_checker=True,
+                kwargs={
+                    "camera_names": ["gripper_camera_rgb"] if "FO" in observation_mode else None,
+                    "width": 64,
+                    "height": 64,
+                    "render_mode": "depth_array" if "depth" in observation_mode.lower() else "rgb_array",
+                    "obj_range": difficulty,
+                },
+            )
+
+    # ------ Fixed Camera -> 2D Blind Pick ------
+    for observation_mode in ["FO", "PO", "DepthFO", "DepthPO"]:
+        for difficulty in [0.07, 0.15]:
+            register(
+                id=f"{observation_mode}Fixed2DBlind{int(difficulty*100)}cmPick-v0",
+                entry_point="gymnasium_robotics.envs.fetch.blind_pick:FetchBlindPickEnv",
+                max_episode_steps=100,
+                disable_env_checker=True,
+                kwargs={
+                    "camera_names": ["external_camera_0"] if "FO" in observation_mode else None,
+                    "width": 64,
+                    "height": 64,
+                    "render_mode": "depth_array" if "depth" in observation_mode.lower() else "rgb_array",
+                    "obj_range": difficulty,
+                },
+            )
 
     for observation_mode in ["FO", "PO", "DepthFO", "DepthPO"]:
         register(

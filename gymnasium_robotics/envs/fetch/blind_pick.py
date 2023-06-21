@@ -14,10 +14,10 @@ from gymnasium_robotics.envs.fetch import MujocoFetchEnv, goal_distance
 MODEL_XML_PATH = os.path.join("fetch", "occluded_pick_blind.xml")
 
 
-class FetchOccludedPickEnv(MujocoFetchEnv, EzPickle):
+class FetchBlindPickEnv(MujocoFetchEnv, EzPickle):
     metadata = {"render_modes": ["rgb_array", "depth_array"], 'render_fps': 25}
     render_mode = "rgb_array"
-    def __init__(self, camera_names=None, reward_type="sparse", obj_range=0.2, **kwargs):
+    def __init__(self, camera_names=None, reward_type="dense", obj_range=0.075, **kwargs):
         initial_qpos = {
             "robot0:slide0": 0.405,
             "robot0:slide1": 0.48,
@@ -232,16 +232,21 @@ class FetchOccludedPickEnv(MujocoFetchEnv, EzPickle):
 
 if __name__ == "__main__":
     import imageio
-    env = FetchOccludedPickEnv(["external_camera_0"], "dense", render_mode="depth_array", width=64, height=64)
+    env = FetchBlindPickEnv(["gripper_camera_rgb", "external_camera_0"], "dense", render_mode="rgb_array", width=200, height=200)
     imgs = []
-    for i in range(100):
+    def process_depth(depth):
+        # depth -= depth.min()
+        # depth /= 2*depth[depth <= 1].mean()
+        # pixels = 255*np.clip(depth, 0, 1)
+        # pixels = pixels.astype(np.uint8)
+        # return pixels
+        return depth
+    for _ in range(10):
         obs,_ = env.reset()
-        depth = obs['external_camera_0']
-        depth -= depth.min()
-        depth /= 2*depth[depth <= 1].mean()
-        pixels = 255*np.clip(depth, 0, 1)
-        pixels = pixels.astype(np.uint8)
-        imgs.append(pixels)
+        imgs.append(np.concatenate([obs['external_camera_0'], obs['gripper_camera_rgb']], axis=1))
+        for i in range(10):
+            obs, *_ = env.step(env.action_space.sample())
+            imgs.append(np.concatenate([obs['external_camera_0'], obs['gripper_camera_rgb']], axis=1))
     imageio.mimwrite("test.gif", imgs)
         # open the gripper and descend
         # for i in range(100):

@@ -17,7 +17,7 @@ MODEL_XML_PATH = os.path.join("fetch", "occluded_pick_blind.xml")
 class FetchBlindPickEnv(MujocoFetchEnv, EzPickle):
     metadata = {"render_modes": ["rgb_array", "depth_array"], 'render_fps': 25}
     render_mode = "rgb_array"
-    def __init__(self, camera_names=None, reward_type="dense", obj_range=0.075, **kwargs):
+    def __init__(self, camera_names=None, reward_type="dense", obj_range=0.07, include_obj_state=False, **kwargs):
         initial_qpos = {
             "robot0:slide0": 0.405,
             "robot0:slide1": 0.48,
@@ -62,6 +62,9 @@ class FetchBlindPickEnv(MujocoFetchEnv, EzPickle):
                     )
         _obs_space["robot_state"] = spaces.Box(-np.inf, np.inf, shape=(10,), dtype="float32")
         _obs_space["touch"] = spaces.Box(-np.inf, np.inf, shape=(2,), dtype="float32")
+        self.include_obj_state = include_obj_state
+        if include_obj_state:
+            _obs_space["obj_state"] = spaces.Box(-np.inf, np.inf, shape=(10,), dtype="float32")
 
         self.observation_space = spaces.Dict(_obs_space)
         EzPickle.__init__(self, camera_names=camera_names, image_size=32, reward_type=reward_type, **kwargs)
@@ -142,6 +145,9 @@ class FetchBlindPickEnv(MujocoFetchEnv, EzPickle):
             gripper_vel = robot_qvel[-2:] * dt # change to a scalar if the gripper is made symmetric
             
             obs["robot_state"] = np.concatenate([grip_pos, grip_velp, gripper_state, gripper_vel]).astype(np.float32)
+            if self.include_obj_state:
+                obj0_pos = self._utils.get_site_xpos(self.model, self.data, "object0").copy()
+                obs["obj_state"] = obj0_pos.astype(np.float32)
 
         else:
             # BaseRobotEnv has called _get_obs to determine observation space dims but mujoco renderer has not been initialized yet.

@@ -1438,6 +1438,22 @@ def register_robotics_envs():
                 },
             )
 
+    # ------ Object State sanity check ------
+    for difficulty in [0.07, 0.15]:
+        register(
+            id=f"State2DBlind{int(difficulty*100)}cmPick-v0",
+            entry_point="gymnasium_robotics.envs.fetch.blind_pick:FetchBlindPickEnv",
+            max_episode_steps=100,
+            disable_env_checker=True,
+            kwargs={
+                "camera_names": None,
+                "width": 64,
+                "height": 64,
+                "render_mode": "rgb_array",
+                "include_obj_state": True,
+            },
+        )
+
     for observation_mode in ["FO", "PO", "DepthFO", "DepthPO"]:
         register(
             id=f"{observation_mode}OccludedPickPlace-v0",

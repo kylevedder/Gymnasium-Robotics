@@ -1446,7 +1446,7 @@ def register_robotics_envs():
             max_episode_steps=100,
             disable_env_checker=True,
             kwargs={
-                "camera_names": None,
+                "camera_names": ["external_camera_0"],
                 "width": 64,
                 "height": 64,
                 "render_mode": "rgb_array",

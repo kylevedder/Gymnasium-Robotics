@@ -64,7 +64,7 @@ class FetchBlindPickEnv(MujocoFetchEnv, EzPickle):
         _obs_space["touch"] = spaces.Box(-np.inf, np.inf, shape=(2,), dtype="float32")
         self.include_obj_state = include_obj_state
         if include_obj_state:
-            _obs_space["obj_state"] = spaces.Box(-np.inf, np.inf, shape=(10,), dtype="float32")
+            _obs_space["obj_state"] = spaces.Box(-np.inf, np.inf, shape=(3,), dtype="float32")
 
         self.observation_space = spaces.Dict(_obs_space)
         EzPickle.__init__(self, camera_names=camera_names, image_size=32, reward_type=reward_type, **kwargs)

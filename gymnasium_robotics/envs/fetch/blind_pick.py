@@ -238,7 +238,7 @@ class FetchBlindPickEnv(MujocoFetchEnv, EzPickle):
 
 if __name__ == "__main__":
     import imageio
-    env = FetchBlindPickEnv(["gripper_camera_rgb", "external_camera_0"], "dense", render_mode="rgb_array", width=200, height=200)
+    env = FetchBlindPickEnv(["camera_under", "gripper_camera_rgb"], "dense", render_mode="rgb_array", width=200, height=200, obj_range=0.15)
     imgs = []
     def process_depth(depth):
         # depth -= depth.min()
@@ -249,10 +249,10 @@ if __name__ == "__main__":
         return depth
     for _ in range(10):
         obs,_ = env.reset()
-        imgs.append(np.concatenate([obs['external_camera_0'], obs['gripper_camera_rgb']], axis=1))
+        imgs.append(np.concatenate([obs['camera_under'], obs['gripper_camera_rgb']], axis=1))
         for i in range(10):
             obs, *_ = env.step(env.action_space.sample())
-            imgs.append(np.concatenate([obs['external_camera_0'], obs['gripper_camera_rgb']], axis=1))
+            imgs.append(np.concatenate([obs['camera_under'], obs['gripper_camera_rgb']], axis=1))
     imageio.mimwrite("test.gif", imgs)
         # open the gripper and descend
         # for i in range(100):

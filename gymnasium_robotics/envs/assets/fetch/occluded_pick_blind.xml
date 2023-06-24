@@ -34,6 +34,14 @@
 			<camera mode="targetbody" target="arenacenter"  fovy="90" name="camera_under" ></camera>
 			<site name="camera_under_site" pos="0 0 0" size="0.02 0.02 0.02" rgba="0 1 1 1" type="sphere"></site>
 		</body>
+		<body name="camera_side" pos="1.3 0.4 0.5">
+			<camera mode="targetbody" target="arenacenter"  fovy="50" name="camera_side" ></camera>
+			<!-- <site name="camera_side_site" pos="0 0 0" size="0.05 0.05 0.05" rgba="1 1 1 1" type="sphere"></site> -->
+		</body>
+		<body name="camera_front" pos="1.7 0.75 0.5">
+			<camera mode="targetbody" target="arenacenter"  fovy="50" name="camera_front" ></camera>
+			<site name="camera_front_site" pos="0 0 0" size="0.05 0.05 0.05" rgba="1 1 1 1" type="sphere"></site>
+		</body>
 	</worldbody>
 	<actuator>
 		<position ctrllimited="true" ctrlrange="0 0.2" joint="robot0:l_gripper_finger_joint" kp="30000" name="robot0:l_gripper_finger_joint" user="1"></position>

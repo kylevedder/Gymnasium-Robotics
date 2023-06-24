@@ -1447,7 +1447,7 @@ def register_robotics_envs():
                 max_episode_steps=100,
                 disable_env_checker=True,
                 kwargs={
-                    "camera_names": ["external_camera_0", "camera_side", "gripper_camera_rgb"] if "FO" in observation_mode else None,
+                    "camera_names": ["camera_front", "camera_side", "gripper_camera_rgb"] if "FO" in observation_mode else None,
                     "width": 64,
                     "height": 64,
                     "render_mode": "rgb_array",

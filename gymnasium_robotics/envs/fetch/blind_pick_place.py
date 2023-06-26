@@ -9,13 +9,13 @@ from gymnasium.utils.ezpickle import EzPickle
 from gymnasium_robotics.envs.fetch import MujocoFetchEnv, goal_distance
 
 # Ensure we get the path separator correct on windows
-MODEL_XML_PATH = os.path.join("fetch", "blind_pick.xml")
+MODEL_XML_PATH = os.path.join("fetch", "blind_pick_place.xml")
 
 
-class FetchBlindPickEnv(MujocoFetchEnv, EzPickle):
+class FetchBlindPickPlaceEnv(MujocoFetchEnv, EzPickle):
     metadata = {"render_modes": ["rgb_array", "depth_array"], 'render_fps': 25}
     render_mode = "rgb_array"
-    def __init__(self, camera_names=None, reward_type="dense", obj_range=0.07, include_obj_state=False, **kwargs):
+    def __init__(self, camera_names=None, reward_type="dense", obj_range=0.07, bin_range=0.05, include_obj_state=False, include_bin_state=False, **kwargs):
         initial_qpos = {
             "robot0:slide0": 0.405,
             "robot0:slide1": 0.48,
@@ -24,7 +24,7 @@ class FetchBlindPickEnv(MujocoFetchEnv, EzPickle):
         }
         self.camera_names = camera_names if camera_names is not None else []
         workspace_min=np.array([1.1, 0.44, 0.42])
-        workspace_max=np.array([1.5, 1.05, 0.7])
+        workspace_max=np.array([1.6, 1.05, 0.6])
 
         self.workspace_min = workspace_min
         self.workspace_max = workspace_max
@@ -39,7 +39,7 @@ class FetchBlindPickEnv(MujocoFetchEnv, EzPickle):
             target_in_the_air=False,
             target_offset=0.0,
             obj_range=obj_range,
-            target_range=0.0,
+            target_range=bin_range,
             distance_threshold=0.05,
             initial_qpos=initial_qpos,
             reward_type=reward_type,
@@ -48,6 +48,11 @@ class FetchBlindPickEnv(MujocoFetchEnv, EzPickle):
         self.cube_body_id = self._mujoco.mj_name2id(
             self.model, self._mujoco.mjtObj.mjOBJ_BODY, "object0"
         )
+        self.bin_body_id = self._mujoco.mj_name2id(
+            self.model, self._mujoco.mjtObj.mjOBJ_BODY, "bin1"
+        )
+        self.bin_init_pos = self.model.body_pos[self.bin_body_id].copy()
+        self.bin_goal_offset = np.array([0, 0, 0.025])
         # consists of images and proprioception.
         _obs_space = {}
         if isinstance(camera_names, list) and len(camera_names) > 0:
@@ -63,13 +68,18 @@ class FetchBlindPickEnv(MujocoFetchEnv, EzPickle):
         self.include_obj_state = include_obj_state
         if include_obj_state:
             _obs_space["obj_state"] = spaces.Box(-np.inf, np.inf, shape=(3,), dtype="float32")
+        self.include_bin_state = include_bin_state
+        if include_bin_state:
+            _obs_space["bin_state"] = spaces.Box(-np.inf, np.inf, shape=(3,), dtype="float32")
 
         self.observation_space = spaces.Dict(_obs_space)
         EzPickle.__init__(self, camera_names=camera_names, image_size=32, reward_type=reward_type, **kwargs)
 
     def _sample_goal(self):
-        goal = np.array([1.33, 0.75, 0.60])
-        return goal.copy()
+        bin_xpos = self.bin_init_pos.copy()
+        y_offset = self.np_random.uniform(-self.target_range, self.target_range)
+        bin_xpos[1] += y_offset
+        return bin_xpos + self.bin_goal_offset
 
     def _reset_sim(self):
         self.data.time = self.initial_time
@@ -147,6 +157,10 @@ class FetchBlindPickEnv(MujocoFetchEnv, EzPickle):
                 obj0_pos = self._utils.get_site_xpos(self.model, self.data, "object0").copy()
                 obs["obj_state"] = obj0_pos.astype(np.float32)
 
+            if self.include_bin_state:
+                bin1_pos = self._utils.get_site_xpos(self.model, self.data, "bin1").copy()
+                obs["bin_state"] = bin1_pos.astype(np.float32)
+
         else:
             # BaseRobotEnv has called _get_obs to determine observation space dims but mujoco renderer has not been initialized yet.
             # in this case, return an obs dict with arbitrary values for each ey
@@ -181,11 +195,18 @@ class FetchBlindPickEnv(MujocoFetchEnv, EzPickle):
         obs = self._get_obs()
 
         obj0_pos = self._utils.get_site_xpos(self.model, self.data, "object0")
+        # if object xy is within 0.04m and z is within 0.02m, then terminate
+        xy_dist = goal_distance(obj0_pos[:2], self.goal[:2])
+        xy_success = goal_distance(obj0_pos[:2], self.goal[:2]) < 0.04 
+        z_dist =  np.abs(obj0_pos[2] - self.goal[2])
+        z_success =  np.abs(obj0_pos[2] - self.goal[2]) < 0.03
+        terminated = xy_success and z_success
         info = {
-            "is_success": self._is_success(obj0_pos, self.goal),
+            "xy_dist": xy_dist,
+            "z_dist": z_dist,
+            "xy_success": xy_success,
+            "z_success": z_success,
         }
-
-        terminated = goal_distance(obj0_pos, self.goal) < 0.05
         # handled by time limit wrapper.
         truncated = self.compute_truncated(obj0_pos, self.goal, info)
 
@@ -223,6 +244,9 @@ class FetchBlindPickEnv(MujocoFetchEnv, EzPickle):
         while not did_reset_sim:
             did_reset_sim = self._reset_sim()
         self.goal = self._sample_goal().copy()
+        self.model.body_pos[self.bin_body_id] = self.goal - self.bin_goal_offset
+        self._mujoco.mj_forward(self.model, self.data)
+
         obs = self._get_obs()
         if self.render_mode == "human":
             self.render()
@@ -236,7 +260,8 @@ class FetchBlindPickEnv(MujocoFetchEnv, EzPickle):
 
 if __name__ == "__main__":
     import imageio
-    env = FetchBlindPickEnv(["camera_side","camera_front", "gripper_camera_rgb"], "dense", render_mode="rgb_array", width=64, height=64, obj_range=0.15)
+    cam_keys = ["camera_side","camera_behind", "gripper_camera_rgb"]
+    env = FetchBlindPickPlaceEnv(cam_keys, "dense", render_mode="rgb_array", width=64, height=64, obj_range=0.07)
     imgs = []
     def process_depth(depth):
         # depth -= depth.min()
@@ -247,7 +272,7 @@ if __name__ == "__main__":
         return depth
     for _ in range(100):
         obs,_ = env.reset()
-        imgs.append(np.concatenate([obs['camera_side'], obs['camera_front'], obs['gripper_camera_rgb']], axis=1))
+        imgs.append(np.concatenate([obs[k] for k in cam_keys], axis=1))
         # for i in range(10):
         #     obs, *_ = env.step(env.action_space.sample())
         #     imgs.append(np.concatenate([obs['camera_side'], obs['camera_front'], obs['gripper_camera_rgb']], axis=1))

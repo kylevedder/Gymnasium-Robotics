@@ -260,7 +260,7 @@ class FetchBlindPickPlaceEnv(MujocoFetchEnv, EzPickle):
 
 if __name__ == "__main__":
     import imageio
-    cam_keys = ["camera_side","camera_behind", "gripper_camera_rgb"]
+    cam_keys = ["camera_side","camera_front", "gripper_camera_rgb"]
     env = FetchBlindPickPlaceEnv(cam_keys, "dense", render_mode="rgb_array", width=64, height=64, obj_range=0.07)
     imgs = []
     def process_depth(depth):

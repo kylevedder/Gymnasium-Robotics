@@ -1468,6 +1468,7 @@ def register_robotics_envs():
                 "height": 64,
                 "render_mode": "rgb_array",
                 "include_obj_state": True,
+                "obj_range": difficulty,
             },
         )
 
@@ -1486,6 +1487,38 @@ def register_robotics_envs():
             "include_bin_state": True,
         },
     )
+
+    # Pick and Place, Fixed Cam -> Hand Cam Policy
+    for difficulty in [0.07]:
+        register(
+            id=f"FixedToHand{int(difficulty*100)}cmPick5cmPlace-v0",
+            entry_point="gymnasium_robotics.envs.fetch.blind_pick_place:FetchBlindPickPlaceEnv",
+            max_episode_steps=100,
+            disable_env_checker=True,
+            kwargs={
+                "camera_names": ["camera_behind", "camera_side", "gripper_camera_rgb"],
+                "width": 64,
+                "height": 64,
+                "render_mode": "rgb_array",
+                "obj_range": difficulty,
+            },
+        )
+
+    # Pick and Place, Hand Cam -> Fixed Cam Policy
+    for difficulty in [0.07]:
+        register(
+            id=f"HandToFixed{int(difficulty*100)}cmPick5cmPlace-v0",
+            entry_point="gymnasium_robotics.envs.fetch.blind_pick_place:FetchBlindPickPlaceEnv",
+            max_episode_steps=100,
+            disable_env_checker=True,
+            kwargs={
+                "camera_names": ["camera_front", "gripper_camera_rgb"],
+                "width": 64,
+                "height": 64,
+                "render_mode": "rgb_array",
+                "obj_range": difficulty,
+            },
+        )
 
     for observation_mode in ["FO", "PO", "DepthFO", "DepthPO"]:
         register(

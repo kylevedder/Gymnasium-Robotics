@@ -1501,7 +1501,7 @@ def register_robotics_envs():
             "render_mode": "rgb_array",
             "include_obj_state": True,
             "include_bin_state": True,
-            "reward": "dense_v2",
+            "reward_type": "dense_v2",
         },
     )
 

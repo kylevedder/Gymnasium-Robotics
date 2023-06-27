@@ -16,6 +16,7 @@ class FetchBlindPickPlaceEnv(MujocoFetchEnv, EzPickle):
     metadata = {"render_modes": ["rgb_array", "depth_array"], 'render_fps': 25}
     render_mode = "rgb_array"
     def __init__(self, camera_names=None, reward_type="dense", obj_range=0.07, bin_range=0.05, include_obj_state=False, include_bin_state=False, **kwargs):
+        assert reward_type in {"dense", "dense_v2"}
         initial_qpos = {
             "robot0:slide0": 0.405,
             "robot0:slide1": 0.48,
@@ -213,23 +214,46 @@ class FetchBlindPickPlaceEnv(MujocoFetchEnv, EzPickle):
         # reward = self.compute_reward(obj0_pos, self.goal, info)
         # success bonus
         reward = 0
-        if terminated:
-            # print("success phase")
-            reward = 300
-        else:
-            dist = np.linalg.norm(curr_eef_state - obj0_pos)
-            reaching_reward = 1 - np.tanh(10.0 * dist)
-            reward += reaching_reward
-            # msg = "reaching phase"
+        if self.reward_type == "dense":
+            if terminated:
+                reward = 300
+            else:
+                dist = np.linalg.norm(curr_eef_state - obj0_pos)
+                reaching_reward = 1 - np.tanh(10.0 * dist)
+                reward += reaching_reward
 
-            # grasping reward
-            if obs["touch"].all():
-                reward += 0.25
-                dist = np.linalg.norm(self.goal - obj0_pos)
-                picking_reward = 1 - np.tanh(10.0 * dist)
-                reward += picking_reward
-            #     msg = "picking phase"
-            # print(msg)
+                # grasping reward
+                if obs["touch"].all():
+                    reward += 0.25
+                    dist = np.linalg.norm(self.goal - obj0_pos)
+                    picking_reward = 1 - np.tanh(10.0 * dist)
+                    reward += picking_reward
+        elif self.reward_type == "dense_v2":
+            if terminated:
+                # print("success phase")
+                reward = 300
+            else:
+                dist = np.linalg.norm(curr_eef_state - obj0_pos)
+                reaching_reward = 1 - np.tanh(10.0 * dist)
+                reward += reaching_reward
+                # msg = "Phase 1: reaching"
+
+                # grasping reward
+                if obs["touch"].all():
+                    # msg = "Phase 2: placing"
+                    reward += 0.25
+                    dist = np.linalg.norm(self.goal - obj0_pos)
+                    if dist > 0.1:
+                        # give additional reward for just z position.
+                        z_dist = np.abs(obj0_pos[2] - (self.goal[2]+0.05))
+                        picking_reward = 1 - np.tanh(10.0 * z_dist)
+                        reward += picking_reward
+                    else:
+                        # msg = "Phase 3: fine placing"
+                        reward += 1.0
+                        picking_reward = 1 - np.tanh(10.0 * dist)
+                        reward += picking_reward
+                # print(msg)
 
         return obs, reward, terminated, truncated, info
 
@@ -247,6 +271,8 @@ class FetchBlindPickPlaceEnv(MujocoFetchEnv, EzPickle):
         self.model.body_pos[self.bin_body_id] = self.goal - self.bin_goal_offset
         self._mujoco.mj_forward(self.model, self.data)
 
+
+        self.above_object_point = None
         obs = self._get_obs()
         if self.render_mode == "human":
             self.render()
@@ -261,7 +287,33 @@ class FetchBlindPickPlaceEnv(MujocoFetchEnv, EzPickle):
 if __name__ == "__main__":
     import imageio
     cam_keys = ["camera_side","camera_front", "gripper_camera_rgb"]
-    env = FetchBlindPickPlaceEnv(cam_keys, "dense", render_mode="rgb_array", width=64, height=64, obj_range=0.07)
+    env = FetchBlindPickPlaceEnv(cam_keys, "dense_v2", render_mode="human", width=64, height=64, obj_range=0.01, bin_range=0.01)
+
+
+    for _ in range(1):
+        env.reset()
+        # open the gripper and descend
+        for i in range(5):
+            obs, rew, term, trunc, info = env.step(np.array([-0.2, 0, -1, 1.0]))
+            print(rew)
+        # close gripper
+        for i in range(10):
+            obs, rew, term, trunc, info= env.step(np.array([0,0,0.0,-1.0]))
+            print(rew)
+        # lift up cube
+        for i in range(10):
+            obs, rew, term, trunc, info = env.step(np.array([0,0,1.0,-1.0]))
+            print(rew)
+        # move towards bin
+        for i in range(8):
+            obs, rew, term, trunc, info = env.step(np.array([1.0,0,0.0,-1.0]))
+            print(rew)
+        # drop arm down
+        for i in range(4):
+            obs, rew, term, trunc, info = env.step(np.array([0,0,-1.0,-1.0]))
+            print(rew)
+
+
     imgs = []
     def process_depth(depth):
         # depth -= depth.min()
@@ -270,13 +322,13 @@ if __name__ == "__main__":
         # pixels = pixels.astype(np.uint8)
         # return pixels
         return depth
-    for _ in range(100):
-        obs,_ = env.reset()
-        imgs.append(np.concatenate([obs[k] for k in cam_keys], axis=1))
-        # for i in range(10):
-        #     obs, *_ = env.step(env.action_space.sample())
-        #     imgs.append(np.concatenate([obs['camera_side'], obs['camera_front'], obs['gripper_camera_rgb']], axis=1))
-    imageio.mimwrite("test.gif", imgs)
+    # for _ in range(100):
+    #     obs,_ = env.reset()
+    #     imgs.append(np.concatenate([obs[k] for k in cam_keys], axis=1))
+    #     # for i in range(10):
+    #     #     obs, *_ = env.step(env.action_space.sample())
+    #     #     imgs.append(np.concatenate([obs['camera_side'], obs['camera_front'], obs['gripper_camera_rgb']], axis=1))
+    # imageio.mimwrite("test.gif", imgs)
         # open the gripper and descend
         # for i in range(100):
         #     obs, rew, term, trunc, info = env.step(np.array([0, -1.0, 0, 1.0]))

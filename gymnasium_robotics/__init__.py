@@ -1488,6 +1488,23 @@ def register_robotics_envs():
         },
     )
 
+    # ------ Pick and Place, State sanity check, dense midpoint reward. ------
+    register(
+        id=f"StateDenseV2Midpoint7cmPick5cmPlace-v0",
+        entry_point="gymnasium_robotics.envs.fetch.blind_pick_place:FetchBlindPickPlaceEnv",
+        max_episode_steps=100,
+        disable_env_checker=True,
+        kwargs={
+            "camera_names": ["external_camera_0"],
+            "width": 64,
+            "height": 64,
+            "render_mode": "rgb_array",
+            "include_obj_state": True,
+            "include_bin_state": True,
+            "reward": "dense_v2",
+        },
+    )
+
     # Pick and Place, Fixed Cam -> Hand Cam Policy
     for difficulty in [0.07]:
         register(

@@ -16,7 +16,7 @@ class FetchBlindPickPlaceEnv(MujocoFetchEnv, EzPickle):
     metadata = {"render_modes": ["rgb_array", "depth_array"], 'render_fps': 25}
     render_mode = "rgb_array"
     def __init__(self, camera_names=None, reward_type="dense", obj_range=0.07, bin_range=0.05, include_obj_state=False, include_bin_state=False, **kwargs):
-        assert reward_type in {"dense", "dense_v3"}
+        assert reward_type in {"dense", "dense_v3", "dense_staged"}
         initial_qpos = {
             "robot0:slide0": 0.405,
             "robot0:slide1": 0.48,
@@ -25,7 +25,7 @@ class FetchBlindPickPlaceEnv(MujocoFetchEnv, EzPickle):
         }
         self.camera_names = camera_names if camera_names is not None else []
         workspace_min=np.array([1.1, 0.44, 0.42])
-        workspace_max=np.array([1.6, 1.05, 0.6])
+        workspace_max=np.array([1.6, 1.05, 0.7])
 
         self.workspace_min = workspace_min
         self.workspace_max = workspace_max
@@ -178,7 +178,7 @@ class FetchBlindPickPlaceEnv(MujocoFetchEnv, EzPickle):
         action = action.copy()
         action = np.clip(action, self.action_space.low, self.action_space.high)
         # check if action is out of bounds
-        curr_eef_state = self._utils.get_site_xpos(self.model, self.data, 'robot0:grip')
+        curr_eef_state = self._utils.get_site_xpos(self.model, self.data, 'robot0:grip').copy()
         next_eef_state = curr_eef_state + (action[:3] * 0.05)
 
         next_eef_state = np.clip(next_eef_state, self.workspace_min, self.workspace_max)
@@ -195,7 +195,8 @@ class FetchBlindPickPlaceEnv(MujocoFetchEnv, EzPickle):
             self.render()
         obs = self._get_obs()
 
-        obj0_pos = self._utils.get_site_xpos(self.model, self.data, "object0")
+        curr_eef_state = self._utils.get_site_xpos(self.model, self.data, 'robot0:grip').copy()
+        obj0_pos = self._utils.get_site_xpos(self.model, self.data, "object0").copy()
         # if object xy is within 0.04m and z is within 0.02m, then terminate
         xy_dist = goal_distance(obj0_pos[:2], self.goal[:2])
         xy_success = goal_distance(obj0_pos[:2], self.goal[:2]) < 0.04 
@@ -252,8 +253,61 @@ class FetchBlindPickPlaceEnv(MujocoFetchEnv, EzPickle):
                     reward += lifting_reward
 
                 # print(msg)
+        elif self.reward_type == "dense_staged":
+            if terminated:
+                reward = 300
+                # print(" terminated")
+            else: 
+                staged_rewards = self.staged_rewards(obs)
+                # print(f"    Rew: {max(staged_rewards):.2f}, reach: {staged_rewards[0]:.2f}, grasp: {staged_rewards[1]:.2f}, lift: {staged_rewards[2]:.2f}, hover: {staged_rewards[3]:.2f}")
+                reward += max(staged_rewards)
 
         return obs, reward, terminated, truncated, info
+
+    def staged_rewards(self, obs):
+        """
+        Returns staged rewards based on current physical states.
+        Stages consist of reaching, grasping, lifting, and hovering.
+
+        Returns:
+            4-tuple:
+
+                - (float) reaching reward
+                - (float) grasping reward
+                - (float) lifting reward
+                - (float) hovering reward
+        """
+        reach_mult = 0.1
+        grasp_mult = 0.35
+        lift_mult = 0.5
+        hover_mult = 0.7
+
+        curr_eef_state = self._utils.get_site_xpos(self.model, self.data, 'robot0:grip').copy()
+        obj0_pos = self._utils.get_site_xpos(self.model, self.data, "object0").copy()
+
+        # reaching reward
+        eef_obj_dist = np.linalg.norm(curr_eef_state - obj0_pos)
+        r_reach = (1 - np.tanh(10.0 * eef_obj_dist)) * reach_mult
+
+        # grasping reward 
+        r_grasp = int(obs["touch"].all()) * grasp_mult
+
+        # lifting reward for picking up an object
+        r_lift = 0.0
+        if r_grasp > 0.0:
+            z_target = self.goal[2] + 0.08
+            z_dist = max(z_target - obj0_pos[2], 0)
+            r_lift = grasp_mult + (1 - np.tanh(10.0 * z_dist)) * (lift_mult - grasp_mult)
+
+        # hovering reward
+        obj_goal_xy_dist = np.linalg.norm(self.goal[:2] - obj0_pos[:2])
+        object_above_bin = (obj_goal_xy_dist < 0.05) and (obj0_pos[2] > self.goal[2])
+        if object_above_bin:
+            r_hover = lift_mult + (1 - np.tanh(10.0 * obj_goal_xy_dist)) * (hover_mult - lift_mult)
+        else:
+            r_hover = r_lift + (1 - np.tanh(10.0 * obj_goal_xy_dist)) * (hover_mult - lift_mult)
+        return r_reach, r_grasp, r_lift, r_hover
+
 
     def reset(
         self,
@@ -285,31 +339,34 @@ class FetchBlindPickPlaceEnv(MujocoFetchEnv, EzPickle):
 if __name__ == "__main__":
     import imageio
     cam_keys = ["camera_side","camera_front", "gripper_camera_rgb"]
-    env = FetchBlindPickPlaceEnv(cam_keys, "dense_v2", render_mode="human", width=64, height=64, obj_range=0.01, bin_range=0.01)
+    env = FetchBlindPickPlaceEnv(cam_keys, "dense_staged", render_mode="human", width=64, height=64, obj_range=0.01, bin_range=0.01)
 
 
     for _ in range(1):
         env.reset()
+        print("Reaching for object")
         # open the gripper and descend
         for i in range(5):
             obs, rew, term, trunc, info = env.step(np.array([-0.2, 0, -1, 1.0]))
-            print(rew)
+            # print(rew)
+        print("Lifting up cube.")
         # close gripper
         for i in range(10):
             obs, rew, term, trunc, info= env.step(np.array([0,0,0.0,-1.0]))
-            print(rew)
+            # print(rew)
         # lift up cube
         for i in range(10):
             obs, rew, term, trunc, info = env.step(np.array([0,0,1.0,-1.0]))
-            print(rew)
+            # print(rew)
         # move towards bin
+        print("Moving towards bin.")
         for i in range(8):
             obs, rew, term, trunc, info = env.step(np.array([1.0,0,0.0,-1.0]))
-            print(rew)
+            # print(rew)
         # drop arm down
         for i in range(4):
             obs, rew, term, trunc, info = env.step(np.array([0,0,-1.0,-1.0]))
-            print(rew)
+            # print(rew)
 
 
     imgs = []

@@ -1504,6 +1504,21 @@ def register_robotics_envs():
             "reward_type": "dense_v3",
         },
     )
+    register(
+        id=f"StateDenseStaged7cmPick5cmPlace-v0",
+        entry_point="gymnasium_robotics.envs.fetch.blind_pick_place:FetchBlindPickPlaceEnv",
+        max_episode_steps=100,
+        disable_env_checker=True,
+        kwargs={
+            "camera_names": ["external_camera_0"],
+            "width": 64,
+            "height": 64,
+            "render_mode": "rgb_array",
+            "include_obj_state": True,
+            "include_bin_state": True,
+            "reward_type": "dense_staged",
+        },
+    )
 
     # Pick and Place, Fixed Cam -> Hand Cam Policy
     for difficulty in [0.07]:

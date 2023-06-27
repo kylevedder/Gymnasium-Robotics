@@ -1490,7 +1490,7 @@ def register_robotics_envs():
 
     # ------ Pick and Place, State sanity check, dense midpoint reward. ------
     register(
-        id=f"StateDenseV2Midpoint7cmPick5cmPlace-v0",
+        id=f"StateDenseV3Midpoint7cmPick5cmPlace-v0",
         entry_point="gymnasium_robotics.envs.fetch.blind_pick_place:FetchBlindPickPlaceEnv",
         max_episode_steps=100,
         disable_env_checker=True,
@@ -1501,7 +1501,7 @@ def register_robotics_envs():
             "render_mode": "rgb_array",
             "include_obj_state": True,
             "include_bin_state": True,
-            "reward_type": "dense_v2",
+            "reward_type": "dense_v3",
         },
     )
 

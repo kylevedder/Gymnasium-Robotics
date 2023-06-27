@@ -16,7 +16,7 @@ class FetchBlindPickPlaceEnv(MujocoFetchEnv, EzPickle):
     metadata = {"render_modes": ["rgb_array", "depth_array"], 'render_fps': 25}
     render_mode = "rgb_array"
     def __init__(self, camera_names=None, reward_type="dense", obj_range=0.07, bin_range=0.05, include_obj_state=False, include_bin_state=False, **kwargs):
-        assert reward_type in {"dense", "dense_v2"}
+        assert reward_type in {"dense", "dense_v3"}
         initial_qpos = {
             "robot0:slide0": 0.405,
             "robot0:slide1": 0.48,
@@ -228,7 +228,7 @@ class FetchBlindPickPlaceEnv(MujocoFetchEnv, EzPickle):
                     dist = np.linalg.norm(self.goal - obj0_pos)
                     picking_reward = 1 - np.tanh(10.0 * dist)
                     reward += picking_reward
-        elif self.reward_type == "dense_v2":
+        elif self.reward_type == "dense_v3":
             if terminated:
                 # print("success phase")
                 reward = 300
@@ -240,19 +240,17 @@ class FetchBlindPickPlaceEnv(MujocoFetchEnv, EzPickle):
 
                 # grasping reward
                 if obs["touch"].all():
-                    # msg = "Phase 2: placing"
-                    reward += 0.25
-                    dist = np.linalg.norm(self.goal - obj0_pos)
-                    if dist > 0.1:
-                        # give additional reward for just z position.
-                        z_dist = np.abs(obj0_pos[2] - (self.goal[2]+0.05))
-                        picking_reward = 1 - np.tanh(10.0 * z_dist)
-                        reward += picking_reward
-                    else:
-                        # msg = "Phase 3: fine placing"
-                        reward += 1.0
-                        picking_reward = 1 - np.tanh(10.0 * dist)
-                        reward += picking_reward
+                    reward += 0.25 # give 0.25 reward for touching the object.
+
+                    # moving towards bin reward
+                    bin_dist = np.linalg.norm(self.goal[:2] - obj0_pos[:2])  # only consider xy distance
+                    moving_towards_bin_reward = 1 - np.tanh(10.0 * bin_dist)
+                    reward += moving_towards_bin_reward
+
+                    # new: lifting reward
+                    lifting_reward = np.tanh(20.0 * (obj0_pos[2] - self.goal[2]))  # reward increases as object's height gets closer to bin's height
+                    reward += lifting_reward
+
                 # print(msg)
 
         return obs, reward, terminated, truncated, info

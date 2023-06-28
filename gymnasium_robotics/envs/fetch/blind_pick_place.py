@@ -16,7 +16,7 @@ class FetchBlindPickPlaceEnv(MujocoFetchEnv, EzPickle):
     metadata = {"render_modes": ["rgb_array", "depth_array"], 'render_fps': 25}
     render_mode = "rgb_array"
     def __init__(self, camera_names=None, reward_type="dense", obj_range=0.07, bin_range=0.05, include_obj_state=False, include_bin_state=False, **kwargs):
-        assert reward_type in {"dense", "dense_v3",  "dense_v4", "dense_staged"}
+        assert reward_type == "dense"
         initial_qpos = {
             "robot0:slide0": 0.405,
             "robot0:slide1": 0.48,
@@ -215,104 +215,34 @@ class FetchBlindPickPlaceEnv(MujocoFetchEnv, EzPickle):
         # reward = self.compute_reward(obj0_pos, self.goal, info)
         # success bonus
         reward = 0
-        if self.reward_type == "dense":
-            if terminated:
-                reward = 300
-            else:
-                dist = np.linalg.norm(curr_eef_state - obj0_pos)
-                reaching_reward = 1 - np.tanh(10.0 * dist)
-                reward += reaching_reward
+        reaching_mult = 1.0
+        lifting_mult = 4.0
+        bin_mult = 8.0
+        if terminated:
+            reward = 300
+        else:
+            dist = np.linalg.norm(curr_eef_state - obj0_pos)
+            reaching_reward = (1 - np.tanh(10.0 * dist)) * reaching_mult
 
-                # grasping reward
-                if obs["touch"].all():
-                    reward += 0.25
-                    dist = np.linalg.norm(self.goal - obj0_pos)
-                    picking_reward = 1 - np.tanh(10.0 * dist)
-                    reward += picking_reward
-        elif self.reward_type == "dense_v4":
-            reaching_mult = 1.0
-            lifting_mult = 4.0
-            bin_mult = 8.0
-            if terminated:
-                reward = 300
-            else:
-                dist = np.linalg.norm(curr_eef_state - obj0_pos)
-                reaching_reward = (1 - np.tanh(10.0 * dist)) * reaching_mult
-
-                # lifting to midpoint reward
-                midpoint_reward = 0
-                if obs["touch"].all():
-                    midpoint = np.array([1.42,0.75,0.6])
-                    midpoint_dist = np.linalg.norm(obj0_pos - midpoint)
-                    midpoint_reward = reaching_reward  + (1 - np.tanh(10.0 * midpoint_dist)) * (lifting_mult - reaching_mult)
-                    # if block is close in xy and higher than z
-                    if np.linalg.norm(obj0_pos[:2] - midpoint[:2]) < 0.05:
-                        self.midpoint_achieved = True
-                
-                # midpoint to bin reward.
-                bin_reward = 0
-                if obs["touch"].all() and self.midpoint_achieved:
-                    bin_dist = np.linalg.norm(obj0_pos - self.goal)
-                    bin_reward = midpoint_reward + (1 - np.tanh(10.0 * bin_dist)) * (bin_mult - lifting_mult)
-                reward = max(reaching_reward, midpoint_reward, bin_reward)
-                print(f"    Rew: {reward:.2f}, reach: {reaching_reward:.2f}, midpoint: {midpoint_reward:.2f},  bin: {bin_reward:.2f}")
-
-
-        elif self.reward_type == "dense_staged":
-            if terminated:
-                reward = 300
-                # print(" terminated")
-            else: 
-                staged_rewards = self.staged_rewards(obs)
-                # print(f"    Rew: {max(staged_rewards):.2f}, reach: {staged_rewards[0]:.2f}, grasp: {staged_rewards[1]:.2f}, lift: {staged_rewards[2]:.2f}, hover: {staged_rewards[3]:.2f}")
-                reward += max(staged_rewards)
+            # lifting to midpoint reward
+            midpoint_reward = 0
+            if obs["touch"].all():
+                midpoint = np.array([1.42,0.75,0.6])
+                midpoint_dist = np.linalg.norm(obj0_pos - midpoint)
+                midpoint_reward = reaching_reward  + (1 - np.tanh(10.0 * midpoint_dist)) * (lifting_mult - reaching_mult)
+                # if block is close in xy and higher than z
+                if np.linalg.norm(obj0_pos[:2] - midpoint[:2]) < 0.05:
+                    self.midpoint_achieved = True
+            
+            # midpoint to bin reward.
+            bin_reward = 0
+            if obs["touch"].all() and self.midpoint_achieved:
+                bin_dist = np.linalg.norm(obj0_pos - self.goal)
+                bin_reward = midpoint_reward + (1 - np.tanh(10.0 * bin_dist)) * (bin_mult - lifting_mult)
+            reward = max(reaching_reward, midpoint_reward, bin_reward)
+            # print(f"    Rew: {reward:.2f}, reach: {reaching_reward:.2f}, midpoint: {midpoint_reward:.2f},  bin: {bin_reward:.2f}")
 
         return obs, reward, terminated, truncated, info
-
-    def staged_rewards(self, obs):
-        """
-        Returns staged rewards based on current physical states.
-        Stages consist of reaching, grasping, lifting, and hovering.
-
-        Returns:
-            4-tuple:
-
-                - (float) reaching reward
-                - (float) grasping reward
-                - (float) lifting reward
-                - (float) hovering reward
-        """
-        reach_mult = 0.1
-        grasp_mult = 0.35
-        lift_mult = 0.5
-        hover_mult = 0.7
-
-        curr_eef_state = self._utils.get_site_xpos(self.model, self.data, 'robot0:grip').copy()
-        obj0_pos = self._utils.get_site_xpos(self.model, self.data, "object0").copy()
-
-        # reaching reward
-        eef_obj_dist = np.linalg.norm(curr_eef_state - obj0_pos)
-        r_reach = (1 - np.tanh(10.0 * eef_obj_dist)) * reach_mult
-
-        # grasping reward 
-        r_grasp = int(obs["touch"].all()) * grasp_mult
-
-        # lifting reward for picking up an object
-        r_lift = 0.0
-        if r_grasp > 0.0:
-            z_target = self.goal[2] + 0.08
-            z_dist = max(z_target - obj0_pos[2], 0)
-            r_lift = grasp_mult + (1 - np.tanh(10.0 * z_dist)) * (lift_mult - grasp_mult)
-
-        # hovering reward
-        obj_goal_xy_dist = np.linalg.norm(self.goal[:2] - obj0_pos[:2])
-        object_above_bin = (obj_goal_xy_dist < 0.05) and (obj0_pos[2] > self.goal[2])
-        if object_above_bin:
-            r_hover = lift_mult + (1 - np.tanh(10.0 * obj_goal_xy_dist)) * (hover_mult - lift_mult)
-        else:
-            r_hover = r_lift + (1 - np.tanh(10.0 * obj_goal_xy_dist)) * (hover_mult - lift_mult)
-        return r_reach, r_grasp, r_lift, r_hover
-
 
     def reset(
         self,

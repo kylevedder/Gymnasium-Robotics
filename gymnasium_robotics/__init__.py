@@ -1455,6 +1455,23 @@ def register_robotics_envs():
                 },
             )
 
+    # ------ 32x32 Fixed/Gripper Camera -> 2D Blind Pick ------
+    for observation_mode in ["FO", "PO"]:
+        for difficulty in [0.07, 0.15]:
+            register(
+                id=f"{observation_mode}32x32FixedGripper2DBlind{int(difficulty*100)}cmPick-v0",
+                entry_point="gymnasium_robotics.envs.fetch.blind_pick:FetchBlindPickEnv",
+                max_episode_steps=100,
+                disable_env_checker=True,
+                kwargs={
+                    "camera_names": ["camera_front", "camera_side", "gripper_camera_rgb"] if "FO" in observation_mode else None,
+                    "width": 32,
+                    "height": 32,
+                    "render_mode": "rgb_array",
+                    "obj_range": difficulty,
+                },
+            )
+
     # ------ 2D Blind Picking, Object State sanity check ------
     for difficulty in [0.07, 0.15]:
         register(

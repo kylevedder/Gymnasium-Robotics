@@ -1459,7 +1459,7 @@ def register_robotics_envs():
     for observation_mode in ["FO", "PO"]:
         for difficulty in [0.07, 0.15]:
             register(
-                id=f"{observation_mode}32x32FixedGripper2DBlind{int(difficulty*100)}cmPick-v0",
+                id=f"{observation_mode}32pxFixedGripper2DBlind{int(difficulty*100)}cmPick-v0",
                 entry_point="gymnasium_robotics.envs.fetch.blind_pick:FetchBlindPickEnv",
                 max_episode_steps=100,
                 disable_env_checker=True,

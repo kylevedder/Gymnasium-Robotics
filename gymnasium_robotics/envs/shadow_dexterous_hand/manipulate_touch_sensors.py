@@ -6,6 +6,169 @@ from gymnasium_robotics.envs.shadow_dexterous_hand import (
     MujocoPyManipulateEnv,
 )
 
+class PrivilegedMujocoManipulateTouchSensorsEnv(MujocoManipulateEnv):
+    def __init__(
+        self,
+        target_position,
+        target_rotation,
+        target_position_range,
+        reward_type,
+        initial_qpos={},
+        randomize_initial_position=True,
+        randomize_initial_rotation=True,
+        distance_threshold=0.01,
+        rotation_threshold=0.1,
+        n_substeps=20,
+        relative_control=False,
+        ignore_z_target_rotation=False,
+        touch_visualisation="on_touch",
+        touch_get_obs="sensordata",
+        camera_names=None,
+        log_image_keys = None,
+        **kwargs,
+    ):
+        """Initializes a new Hand manipulation environment with touch sensors.
+
+        Args:
+            touch_visualisation (string): how touch sensor sites are visualised
+                - "on_touch": shows touch sensor sites only when touch values > 0
+                - "always": always shows touch sensor sites
+                - "off" or else: does not show touch sensor sites
+            touch_get_obs (string): touch sensor readings
+                - "boolean": returns 1 if touch sensor reading != 0.0 else 0
+                - "sensordata": returns original touch sensor readings from self.sim.data.sensordata[id]
+                - "log": returns log(x+1) touch sensor readings from self.sim.data.sensordata[id]
+                - "off" or else: does not add touch sensor readings to the observation
+
+        """
+        self.touch_visualisation = touch_visualisation
+        self.touch_get_obs = touch_get_obs
+        self._touch_sensor_id_site_id = []
+        self._touch_sensor_id = []
+        self.touch_color = [1, 0, 0, 0.5]
+        self.notouch_color = [0, 0.5, 0, 0.2]
+        self.camera_names = camera_names if camera_names is not None else []
+        self.log_image_keys = log_image_keys if log_image_keys is not None else []
+        assert len(self.log_image_keys) == len(self.camera_names)
+
+        self._super_constructor_called = False
+        super().__init__(
+            target_position=target_position,
+            target_rotation=target_rotation,
+            target_position_range=target_position_range,
+            reward_type=reward_type,
+            initial_qpos=initial_qpos,
+            randomize_initial_position=randomize_initial_position,
+            randomize_initial_rotation=randomize_initial_rotation,
+            distance_threshold=distance_threshold,
+            rotation_threshold=rotation_threshold,
+            n_substeps=n_substeps,
+            relative_control=relative_control,
+            ignore_z_target_rotation=ignore_z_target_rotation,
+            **kwargs,
+        )
+        self._super_constructor_called = True
+
+        for (
+            k,
+            v,
+        ) in (
+            self._model_names.sensor_name2id.items()
+        ):  # get touch sensor site names and their ids
+            if "robot0:TS_" in k:
+                self._touch_sensor_id_site_id.append(
+                    (
+                        v,
+                        self._model_names.site_name2id[
+                            k.replace("robot0:TS_", "robot0:T_")
+                        ],
+                    )
+                )
+                self._touch_sensor_id.append(v)
+
+        if self.touch_visualisation == "off":  # set touch sensors rgba values
+            for _, site_id in self._touch_sensor_id_site_id:
+                self.model.site_rgba[site_id][3] = 0.0
+        elif self.touch_visualisation == "always":
+            pass
+        
+        _obs_space = dict(
+                desired_goal=spaces.Box(
+                    -np.inf, np.inf, shape=(7,), dtype="float64"
+                ),
+                achieved_goal=spaces.Box(
+                    -np.inf, np.inf, shape=(7,), dtype="float64"
+                ),
+                observation=spaces.Box(
+                    -np.inf, np.inf, shape=(61,), dtype="float64"
+                ),
+                touch=spaces.Box(
+                    0.0, 1.0, shape=(92,), dtype="float64"
+                ),
+            )
+        if len(self.camera_names) > 0:
+            for c, log in zip(self.camera_names, self.log_image_keys):
+                key = f"log_{c}" if log else c
+                _obs_space[key] = spaces.Box(
+                        0, 255, shape=(self.height, self.width, 3), dtype="uint8"
+                    ) if self.render_mode == "rgb_array" else \
+                    spaces.Box(
+                        0, np.inf, shape=(self.height, self.width, 1), dtype="float32"
+                    )
+
+        self.observation_space = spaces.Dict(_obs_space)
+        
+
+    def _render_callback(self):
+        super()._render_callback()
+        if self.touch_visualisation == "on_touch":
+            for touch_sensor_id, site_id in self._touch_sensor_id_site_id:
+                if self.data.sensordata[touch_sensor_id] != 0.0:
+                    self.model.site_rgba[site_id] = self.touch_color
+                else:
+                    self.model.site_rgba[site_id] = self.notouch_color
+
+    def _get_obs(self):
+        robot_qpos, robot_qvel = self._utils.robot_get_obs(
+            self.model, self.data, self._model_names.joint_names
+        )
+        object_qvel = self._utils.get_joint_qvel(self.model, self.data, "object:joint")
+
+        achieved_goal = (
+            self._get_achieved_goal().ravel()
+        )  # this contains the object position + rotation
+        touch_values = []  # get touch sensor readings. if there is one, set value to 1
+
+        if self.touch_get_obs == "sensordata":
+            touch_values = self.data.sensordata[self._touch_sensor_id]
+        elif self.touch_get_obs == "boolean":
+            touch_values = self.data.sensordata[self._touch_sensor_id] > 0.0
+        elif self.touch_get_obs == "log":
+            touch_values = np.log(self.data.sensordata[self._touch_sensor_id] + 1.0)
+        observation = np.concatenate(
+            [robot_qpos, robot_qvel, object_qvel, achieved_goal, touch_values]
+        )
+        if not self._super_constructor_called:
+            return {
+                "observation": observation.copy(),
+                "achieved_goal": achieved_goal.copy(),
+                "desired_goal": self.goal.ravel().copy(),
+            }
+        else:
+            self._render_callback()
+            obs = {}
+            for c, log in zip(self.camera_names, self.log_image_keys):
+                img = self.mujoco_renderer.render(self.render_mode, camera_name=c)
+                key = f"log_{c}" if log else c
+                obs[key] = img[:,:,None] if self.render_mode == 'depth_array' else img
+
+            obs.update({
+                "observation": observation[:61].copy(),
+                "touch": observation[61:].copy(),
+                "achieved_goal": achieved_goal.copy(),
+                "desired_goal": self.goal.ravel().copy(),
+            })
+            return obs
 
 class MujocoManipulateTouchSensorsEnv(MujocoManipulateEnv):
     def __init__(

@@ -8,5 +8,6 @@ from gymnasium_robotics.envs.shadow_dexterous_hand.manipulate import (
 )
 from gymnasium_robotics.envs.shadow_dexterous_hand.manipulate_touch_sensors import (
     MujocoManipulateTouchSensorsEnv,
+    PrivilegedMujocoManipulateTouchSensorsEnv,
     MujocoPyManipulateTouchSensorsEnv,
 )

@@ -93,15 +93,23 @@ class PrivilegedMujocoManipulateTouchSensorsEnv(MujocoManipulateEnv):
             pass
         
         _obs_space = dict(
+                # object position / quat
                 desired_goal=spaces.Box(
                     -np.inf, np.inf, shape=(7,), dtype="float64"
                 ),
+                # object position / quat
                 achieved_goal=spaces.Box(
                     -np.inf, np.inf, shape=(7,), dtype="float64"
                 ),
+                # robot qpos / qvel
                 observation=spaces.Box(
-                    -np.inf, np.inf, shape=(61,), dtype="float64"
+                    -np.inf, np.inf, shape=(48,), dtype="float64"
                 ),
+                # object qpos / qvel
+                object=spaces.Box(
+                    -np.inf, np.inf, shape=(13,), dtype="float64"
+                ),
+                # touch sensors
                 touch=spaces.Box(
                     0.0, 1.0, shape=(92,), dtype="float64"
                 ),
@@ -163,9 +171,10 @@ class PrivilegedMujocoManipulateTouchSensorsEnv(MujocoManipulateEnv):
                 obs[key] = img[:,:,None] if self.render_mode == 'depth_array' else img
 
             obs.update({
-                "observation": observation[:61].copy(),
+                "observation": observation[:48].copy(),
+                "object": observation[48:61].copy(),
                 "touch": observation[61:].copy(),
-                "achieved_goal": achieved_goal.copy(),
+                "achieved_goal": achieved_goal.copy(), # needed for reward computation.
                 "desired_goal": self.goal.ravel().copy(),
             })
             return obs

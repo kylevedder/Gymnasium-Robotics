@@ -5,11 +5,39 @@ from gymnasium.utils.ezpickle import EzPickle
 
 from gymnasium_robotics.envs.shadow_dexterous_hand import (
     MujocoManipulateTouchSensorsEnv,
+    PrivilegedMujocoManipulateTouchSensorsEnv,
     MujocoPyManipulateTouchSensorsEnv,
 )
 
 # Ensure we get the path separator correct on windows
 MANIPULATE_BLOCK_XML = os.path.join("hand", "manipulate_block_touch_sensors.xml")
+
+class PrivilegedMujocoHandPenTouchSensorsEnv(PrivilegedMujocoManipulateTouchSensorsEnv, EzPickle):
+    def __init__(
+        self,
+        target_position="random",
+        target_rotation="xyz",
+        touch_get_obs="sensordata",
+        reward_type="sparse",
+        camera_names=None,
+        log_image_keys=None,
+        **kwargs,
+    ):
+        PrivilegedMujocoManipulateTouchSensorsEnv.__init__(
+            self,
+            model_path=MANIPULATE_BLOCK_XML,
+            touch_get_obs=touch_get_obs,
+            target_rotation=target_rotation,
+            target_position=target_position,
+            target_position_range=np.array([(-0.04, 0.04), (-0.06, 0.02), (0.0, 0.06)]),
+            reward_type=reward_type,
+            camera_names=camera_names,
+            log_image_keys=log_image_keys,
+            **kwargs,
+        )
+        EzPickle.__init__(
+            self, target_position, target_rotation, touch_get_obs, reward_type, camera_names, log_image_keys, **kwargs
+        )
 
 
 class MujocoHandBlockTouchSensorsEnv(MujocoManipulateTouchSensorsEnv, EzPickle):
@@ -114,3 +142,14 @@ class MujocoPyHandBlockTouchSensorsEnv(MujocoPyManipulateTouchSensorsEnv, EzPick
         EzPickle.__init__(
             self, target_position, target_rotation, touch_get_obs, reward_type, **kwargs
         )
+
+if __name__ == "__main__":
+    env = PrivilegedMujocoHandPenTouchSensorsEnv(camera_names=["camera_hand"], log_image_keys=[False],  target_rotation="xyz", touch_get_obs="boolean", reward_type="dense", render_mode="rgb_array", width=64, height=64, touch_visualisation="on_touch")
+
+    import imageio 
+    video = []
+    for i in range(100):
+        obs, _= env.reset()
+        video.append(obs["camera_hand"])
+
+    imageio.mimwrite("test.gif", video)

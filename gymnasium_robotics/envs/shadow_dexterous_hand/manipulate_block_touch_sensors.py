@@ -12,7 +12,7 @@ from gymnasium_robotics.envs.shadow_dexterous_hand import (
 # Ensure we get the path separator correct on windows
 MANIPULATE_BLOCK_XML = os.path.join("hand", "manipulate_block_touch_sensors.xml")
 
-class PrivilegedMujocoHandPenTouchSensorsEnv(PrivilegedMujocoManipulateTouchSensorsEnv, EzPickle):
+class PrivilegedMujocoHandBlockTouchSensorsEnv(PrivilegedMujocoManipulateTouchSensorsEnv, EzPickle):
     def __init__(
         self,
         target_position="random",
@@ -144,7 +144,7 @@ class MujocoPyHandBlockTouchSensorsEnv(MujocoPyManipulateTouchSensorsEnv, EzPick
         )
 
 if __name__ == "__main__":
-    env = PrivilegedMujocoHandPenTouchSensorsEnv(camera_names=["camera_hand"], log_image_keys=[False],  target_rotation="xyz", touch_get_obs="boolean", reward_type="dense", render_mode="rgb_array", width=64, height=64, touch_visualisation="on_touch")
+    env = PrivilegedMujocoHandBlockTouchSensorsEnv(camera_names=["camera_hand"], log_image_keys=[False],  target_rotation="xyz", touch_get_obs="boolean", reward_type="dense", render_mode="rgb_array", width=64, height=64, touch_visualisation="on_touch")
 
     import imageio 
     video = []

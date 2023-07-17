@@ -1531,6 +1531,19 @@ def register_robotics_envs():
                 },
             )
 
+    # ------ HORA 32x32 Fixed/Gripper Camera -> 2D Blind Pick ------
+    register(
+        id=f"HORABlind7cmPick-v0",
+        entry_point="gymnasium_robotics.envs.fetch.blind_pick_hora:FetchBlindPickEnv",
+        max_episode_steps=100,
+        disable_env_checker=True,
+        kwargs={
+            "render_mode": "rgb_array",
+            "obj_range": 0.07,
+            "include_obj_state": True,
+        },
+    )
+
     # ------ 2D Blind Picking, Object State sanity check ------
     for difficulty in [0.07, 0.15]:
         register(

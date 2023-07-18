@@ -1,5 +1,6 @@
 import numpy as np
 from gymnasium import spaces
+from typing import Optional
 
 from gymnasium_robotics.envs.shadow_dexterous_hand import (
     MujocoManipulateEnv,
@@ -49,6 +50,7 @@ class PrivilegedMujocoManipulateTouchSensorsEnv(MujocoManipulateEnv):
         self.notouch_color = [0, 0.5, 0, 0.2]
         self.camera_names = camera_names if camera_names is not None else []
         self.log_image_keys = log_image_keys if log_image_keys is not None else []
+        self.initial_object_state = None
         assert len(self.log_image_keys) == len(self.camera_names)
 
         self._super_constructor_called = False
@@ -93,25 +95,29 @@ class PrivilegedMujocoManipulateTouchSensorsEnv(MujocoManipulateEnv):
             pass
         
         _obs_space = dict(
-                # object position / quat
+                # object position (3), quat (4)
                 desired_goal=spaces.Box(
                     -np.inf, np.inf, shape=(7,), dtype="float64"
                 ),
-                # object position / quat
+                # object position (3), quat (4)
                 achieved_goal=spaces.Box(
                     -np.inf, np.inf, shape=(7,), dtype="float64"
                 ),
-                # robot qpos / qvel
+                # robot qpos (24), qvel (24), initial object qpos (7), qvel (6)
                 observation=spaces.Box(
-                    -np.inf, np.inf, shape=(48,), dtype="float64"
+                    -np.inf, np.inf, shape=(61,), dtype="float64"
                 ),
-                # object qpos / qvel
+                # object qpos (7), qvel (6)
                 object=spaces.Box(
                     -np.inf, np.inf, shape=(13,), dtype="float64"
                 ),
                 # touch sensors
                 touch=spaces.Box(
                     0.0, 1.0, shape=(92,), dtype="float64"
+                ),
+                # success metric
+                log_is_success=spaces.Box(
+                    0.0, 1.0, shape=(1,), dtype="bool"
                 ),
             )
         if len(self.camera_names) > 0:
@@ -170,14 +176,100 @@ class PrivilegedMujocoManipulateTouchSensorsEnv(MujocoManipulateEnv):
                 key = f"log_{c}" if log else c
                 obs[key] = img[:,:,None] if self.render_mode == 'depth_array' else img
 
+            if self.initial_object_state is None:
+                self.initial_object_state = observation[48:61]
+
             obs.update({
-                "observation": observation[:48].copy(),
+                "observation": np.concatenate([observation[:48], self.initial_object_state]),
                 "object": observation[48:61].copy(),
                 "touch": observation[61:].copy(),
                 "achieved_goal": achieved_goal.copy(), # needed for reward computation.
                 "desired_goal": self.goal.ravel().copy(),
             })
             return obs
+    
+    #  BaseRobotEnv methods
+    # -----------------------------
+
+    def step(self, action):
+        """Run one timestep of the environment's dynamics using the agent actions.
+
+        Args:
+            action (np.ndarray): Control action to be applied to the agent and update the simulation. Should be of shape :attr:`action_space`.
+
+        Returns:
+            observation (dictionary): Next observation due to the agent actions .It should satisfy the `GoalEnv` :attr:`observation_space`.
+            reward (integer): The reward as a result of taking the action. This is calculated by :meth:`compute_reward` of `GoalEnv`.
+            terminated (boolean): Whether the agent reaches the terminal state. This is calculated by :meth:`compute_terminated` of `GoalEnv`.
+            truncated (boolean): Whether the truncation condition outside the scope of the MDP is satisfied. Timically, due to a timelimit, but
+            it is also calculated in :meth:`compute_truncated` of `GoalEnv`.
+            info (dictionary): Contains auxiliary diagnostic information (helpful for debugging, learning, and logging). In this case there is a single
+            key `is_success` with a boolean value, True if the `achieved_goal` is the same as the `desired_goal`.
+        """
+        if np.array(action).shape != self.action_space.shape:
+            raise ValueError("Action dimension mismatch")
+
+        action = np.clip(action, self.action_space.low, self.action_space.high)
+        self._set_action(action)
+
+        self._mujoco_step(action)
+
+        self._step_callback()
+
+        if self.render_mode == "human":
+            self.render()
+        obs = self._get_obs()
+
+        info = {
+            "is_success": self._is_success(obs["achieved_goal"], self.goal),
+        }
+        obs["log_is_success"] = info["is_success"]
+
+        terminated = bool(info["is_success"])
+        reward = 1000 if terminated else 0
+
+        truncated = self.compute_truncated(obs["achieved_goal"], self.goal, info)
+
+        reward += self.compute_reward(obs["achieved_goal"], self.goal, info)
+
+        return obs, reward, terminated, truncated, info
+
+    def reset(
+        self,
+        *,
+        seed: Optional[int] = None,
+        options: Optional[dict] = None,
+    ):
+        """Reset MuJoCo simulation to initial state.
+
+        Note: Attempt to reset the simulator. Since we randomize initial conditions, it
+        is possible to get into a state with numerical issues (e.g. due to penetration or
+        Gimbel lock) or we may not achieve an initial condition (e.g. an object is within the hand).
+        In this case, we just keep randomizing until we eventually achieve a valid initial
+        configuration.
+
+        Args:
+            seed (optional integer): The seed that is used to initialize the environment's PRNG (`np_random`). Defaults to None.
+            options (optional dictionary): Can be used when `reset` is override for additional information to specify how the environment is reset.
+
+        Returns:
+            observation (dictionary) : Observation of the initial state. It should satisfy the `GoalEnv` :attr:`observation_space`.
+            info (dictionary): This dictionary contains auxiliary information complementing ``observation``. It should be analogous to
+                the ``info`` returned by :meth:`step`.
+        """
+        super().reset(seed=seed)
+        did_reset_sim = False
+        while not did_reset_sim:
+            did_reset_sim = self._reset_sim()
+        self.goal = self._sample_goal().copy()
+
+        self.initial_object_state = None
+        obs = self._get_obs()
+        obs["log_is_success"] = 0
+        if self.render_mode == "human":
+            self.render()
+
+        return obs, {}
 
 class MujocoManipulateTouchSensorsEnv(MujocoManipulateEnv):
     def __init__(

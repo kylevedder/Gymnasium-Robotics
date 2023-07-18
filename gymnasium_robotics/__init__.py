@@ -145,6 +145,25 @@ def register_robotics_envs():
             ),
             max_episode_steps=100,
         )
+        register(
+            id=f"PrivilegedHandManipulateBlockRotateZ_BooleanTouchSensors{suffix}-v1",
+            entry_point="gymnasium_robotics.envs.shadow_dexterous_hand.manipulate_block_touch_sensors:PrivilegedMujocoHandBlockTouchSensorsEnv",
+            kwargs=_merge(
+                {
+                    "target_position": "ignore",
+                    "target_rotation": "z",
+                    "touch_get_obs": "boolean",
+                    "camera_names": ["camera_hand"],
+                    "log_image_keys": [True],
+                    "render_mode": "rgb_array",
+                    "touch_visualisation": "off",
+                    "width": 64,
+                    "height": 64,
+                },
+                kwargs,
+            ),
+            max_episode_steps=100,
+        )
 
         register(
             id=f"HandManipulateBlockRotateZ_ContinuousTouchSensors{suffix}-v0",

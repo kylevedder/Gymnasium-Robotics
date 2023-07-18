@@ -117,7 +117,7 @@ class PrivilegedMujocoManipulateTouchSensorsEnv(MujocoManipulateEnv):
                 ),
                 # success metric
                 log_is_success=spaces.Box(
-                    0.0, 1.0, shape=(1,), dtype="bool"
+                   low= -np.inf, high=np.inf, dtype="float64"
                 ),
             )
         if len(self.camera_names) > 0:
@@ -223,7 +223,7 @@ class PrivilegedMujocoManipulateTouchSensorsEnv(MujocoManipulateEnv):
         info = {
             "is_success": self._is_success(obs["achieved_goal"], self.goal),
         }
-        obs["log_is_success"] = info["is_success"]
+        obs["log_is_success"] = np.ones((1,), dtype=np.float64) * info["is_success"]
 
         terminated = bool(info["is_success"])
         reward = 1000 if terminated else 0
@@ -265,7 +265,7 @@ class PrivilegedMujocoManipulateTouchSensorsEnv(MujocoManipulateEnv):
 
         self.initial_object_state = None
         obs = self._get_obs()
-        obs["log_is_success"] = 0
+        obs["log_is_success"] = np.zeros((1,), dtype=np.float64)
         if self.render_mode == "human":
             self.render()
 

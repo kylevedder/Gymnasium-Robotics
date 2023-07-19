@@ -234,7 +234,7 @@ class PrivilegedMujocoManipulateTouchSensorsEnv(MujocoManipulateEnv):
 
         terminated = False
         # if object is close to ground, terminate episode
-        if obs["object"][2] < 0.02:
+        if obs["object"][2] < 0.05:
             terminated = True
             reward = -1000
         return obs, reward, terminated, truncated, info

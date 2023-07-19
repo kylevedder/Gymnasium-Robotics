@@ -285,7 +285,7 @@ class MujocoManipulateEnv(get_base_manipulate_env(MujocoHandEnv)):
         assert goal.shape == (7,)
         if self.target_position == "ignore":
             # Move the object to the side since we do not care about it's position.
-            goal[0] += 0.15
+            goal[0] += 0.1
 
         self._utils.set_joint_qpos(self.model, self.data, "target:joint", goal)
         self._utils.set_joint_qvel(self.model, self.data, "target:joint", np.zeros(6))

@@ -144,16 +144,14 @@ class MujocoPyHandBlockTouchSensorsEnv(MujocoPyManipulateTouchSensorsEnv, EzPick
         )
 
 if __name__ == "__main__":
-    env = PrivilegedMujocoHandBlockTouchSensorsEnv(camera_names=["camera_hand"], log_image_keys=[False],  target_rotation="xyz", touch_get_obs="boolean", reward_type="dense", render_mode="rgb_array", width=64, height=64, touch_visualisation="on_touch")
+    env = PrivilegedMujocoHandBlockTouchSensorsEnv(camera_names=["camera_hand"], log_image_keys=[False], target_position="ignore", target_rotation="z", touch_get_obs="boolean", reward_type="dense", render_mode="rgb_array", width=64, height=64, touch_visualisation="on_touch")
 
     import imageio 
     video = []
-    for i in range(100):
+    for i in range(1):
         obs, _= env.reset()
-        import ipdb; ipdb.set_trace()
         for j in range(100):
             obs, reward, terminated, truncated, info = env.step(env.action_space.sample())
-            import ipdb; ipdb.set_trace()
-        video.append(obs["camera_hand"])
+            video.append(obs["camera_hand"])
 
     imageio.mimwrite("test.gif", video)

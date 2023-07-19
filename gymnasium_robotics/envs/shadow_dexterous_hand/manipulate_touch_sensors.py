@@ -225,13 +225,18 @@ class PrivilegedMujocoManipulateTouchSensorsEnv(MujocoManipulateEnv):
         }
         obs["log_is_success"] = np.ones((1,), dtype=np.float64) * info["is_success"]
 
-        terminated = bool(info["is_success"])
-        reward = 1000 if terminated else 0
+        is_success = bool(info["is_success"])
+        reward = 10 if is_success else 0
 
         truncated = self.compute_truncated(obs["achieved_goal"], self.goal, info)
 
         reward += self.compute_reward(obs["achieved_goal"], self.goal, info)
 
+        terminated = False
+        # if object is close to ground, terminate episode
+        if obs["object"][2] < 0.02:
+            terminated = True
+            reward = -1000
         return obs, reward, terminated, truncated, info
 
     def reset(

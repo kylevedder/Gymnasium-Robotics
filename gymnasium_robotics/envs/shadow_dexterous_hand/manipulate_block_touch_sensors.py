@@ -150,6 +150,7 @@ if __name__ == "__main__":
     video = []
     for i in range(1):
         obs, _= env.reset()
+        import ipdb; ipdb.set_trace()
         for j in range(100):
             obs, reward, terminated, truncated, info = env.step(env.action_space.sample())
             video.append(obs["camera_hand"])

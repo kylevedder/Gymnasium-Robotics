@@ -21,6 +21,7 @@ class PrivilegedMujocoHandBlockTouchSensorsEnv(PrivilegedMujocoManipulateTouchSe
         reward_type="sparse",
         camera_names=None,
         log_image_keys=None,
+        include_initial_object_state=True,
         **kwargs,
     ):
         PrivilegedMujocoManipulateTouchSensorsEnv.__init__(
@@ -33,6 +34,7 @@ class PrivilegedMujocoHandBlockTouchSensorsEnv(PrivilegedMujocoManipulateTouchSe
             reward_type=reward_type,
             camera_names=camera_names,
             log_image_keys=log_image_keys,
+            include_initial_object_state=include_initial_object_state,
             **kwargs,
         )
         EzPickle.__init__(
@@ -144,7 +146,7 @@ class MujocoPyHandBlockTouchSensorsEnv(MujocoPyManipulateTouchSensorsEnv, EzPick
         )
 
 if __name__ == "__main__":
-    env = PrivilegedMujocoHandBlockTouchSensorsEnv(camera_names=["camera_hand"], log_image_keys=[False], target_position="ignore", target_rotation="z", touch_get_obs="boolean", reward_type="dense", render_mode="rgb_array", width=64, height=64, touch_visualisation="on_touch")
+    env = PrivilegedMujocoHandBlockTouchSensorsEnv(camera_names=["camera_hand"], log_image_keys=[False], target_position="ignore", target_rotation="z", touch_get_obs="boolean", reward_type="dense", render_mode="rgb_array", width=64, height=64, touch_visualisation="on_touch", include_initial_object_state=False)
 
     import imageio 
     video = []

@@ -326,6 +326,7 @@ class PrivilegedMujocoManipulateTouchSensorsEnv(MujocoManipulateEnv):
         touch_get_obs="sensordata",
         camera_names=None,
         log_image_keys = None,
+        include_initial_object_state=True,
         **kwargs,
     ):
         """Initializes a new Hand manipulation environment with touch sensors.
@@ -351,6 +352,7 @@ class PrivilegedMujocoManipulateTouchSensorsEnv(MujocoManipulateEnv):
         self.camera_names = camera_names if camera_names is not None else []
         self.log_image_keys = log_image_keys if log_image_keys is not None else []
         self.initial_object_state = None
+        self.include_initial_object_state = include_initial_object_state
         assert len(self.log_image_keys) == len(self.camera_names)
 
         self._super_constructor_called = False
@@ -405,7 +407,7 @@ class PrivilegedMujocoManipulateTouchSensorsEnv(MujocoManipulateEnv):
                 ),
                 # robot qpos (24), qvel (24), initial object qpos (7), qvel (6)
                 observation=spaces.Box(
-                    -np.inf, np.inf, shape=(61,), dtype="float64"
+                    -np.inf, np.inf, shape=(61 if include_initial_object_state else 48,), dtype="float64"
                 ),
                 # object qpos (7), qvel (6)
                 object=spaces.Box(
@@ -420,6 +422,7 @@ class PrivilegedMujocoManipulateTouchSensorsEnv(MujocoManipulateEnv):
                    low= -np.inf, high=np.inf, dtype="float64"
                 ),
             )
+
         if len(self.camera_names) > 0:
             for c, log in zip(self.camera_names, self.log_image_keys):
                 key = f"log_{c}" if log else c
@@ -476,11 +479,14 @@ class PrivilegedMujocoManipulateTouchSensorsEnv(MujocoManipulateEnv):
                 key = f"log_{c}" if log else c
                 obs[key] = img[:,:,None] if self.render_mode == 'depth_array' else img
 
-            if self.initial_object_state is None:
-                self.initial_object_state = observation[48:61]
+            
+            obs["observation"] = observation[:48].copy()
+            if self.include_initial_object_state:
+                if self.initial_object_state is None:
+                    self.initial_object_state = observation[48:61]
+                obs["observation"] = np.concatenate([obs["observation"], self.initial_object_state]),
 
             obs.update({
-                "observation": np.concatenate([observation[:48], self.initial_object_state]),
                 "object": observation[48:61].copy(),
                 "touch": observation[61:].copy(),
                 "achieved_goal": achieved_goal.copy(), # needed for reward computation.

@@ -185,6 +185,24 @@ def register_robotics_envs():
             max_episode_steps=100,
         )
         register(
+            id=f"HORAPrivilegedHandManipulateBlockRotateZ_BooleanTouchSensors{suffix}-v1",
+            entry_point="gymnasium_robotics.envs.shadow_dexterous_hand.manipulate_block_touch_sensors:HORAPrivilegedMujocoHandBlockTouchSensorsEnv",
+            kwargs=_merge(
+                {
+                    "target_position": "ignore",
+                    "target_rotation": "z",
+                    "touch_get_obs": "boolean",
+                    "render_mode": "rgb_array",
+                    "touch_visualisation": "off",
+                    "width": 64,
+                    "height": 64,
+                },
+                kwargs,
+            ),
+            max_episode_steps=100,
+        )
+
+        register(
             id=f"HandManipulateBlockRotateZ_ContinuousTouchSensors{suffix}-v0",
             entry_point="gymnasium_robotics.envs.shadow_dexterous_hand.manipulate_block_touch_sensors:MujocoPyHandBlockTouchSensorsEnv",
             kwargs=_merge(

@@ -790,6 +790,27 @@ def register_robotics_envs():
         )
 
         register(
+            id=f"PrivilegedHandManipulatePenRotate_ImageBooleanTouchSensors{suffix}-v1",
+            entry_point="gymnasium_robotics.envs.shadow_dexterous_hand.manipulate_pen_touch_sensors:PrivilegedMujocoHandPenTouchSensorsEnv",
+            kwargs=_merge(
+                {
+                    "target_position": "ignore",
+                    "target_rotation": "xyz",
+                    "touch_get_obs": "boolean",
+                    "camera_names": ["camera_hand"],
+                    "log_image_keys": [False],
+                    "render_mode": "rgb_array",
+                    "touch_visualisation": "off",
+                    "include_initial_object_state": False,
+                    "width": 64,
+                    "height": 64,
+                },
+                kwargs,
+            ),
+            max_episode_steps=100,
+        )
+
+        register(
             id=f"HandManipulatePenRotate_ContinuousTouchSensors{suffix}-v0",
             entry_point="gymnasium_robotics.envs.shadow_dexterous_hand.manipulate_pen_touch_sensors:MujocoPyHandPenTouchSensorsEnv",
             kwargs=_merge(

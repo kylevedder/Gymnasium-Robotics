@@ -184,7 +184,7 @@ class PrivilegedMujocoManipulateTouchSensorsEnv(MujocoManipulateEnv):
             if self.include_initial_object_state:
                 if self.initial_object_state is None:
                     self.initial_object_state = observation[48:61]
-                obs["observation"] = np.concatenate([obs["observation"], self.initial_object_state]),
+                obs["observation"] = np.concatenate([obs["observation"], self.initial_object_state])
 
             obs.update({
                 "object": observation[48:61].copy(),

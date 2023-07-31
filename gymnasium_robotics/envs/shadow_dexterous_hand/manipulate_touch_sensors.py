@@ -582,6 +582,263 @@ class PrivilegedMujocoManipulateTouchSensorsEnv(MujocoManipulateEnv):
 
         return obs, {}
 
+class TGRLMujocoManipulateTouchSensorsEnv(MujocoManipulateEnv):
+    def __init__(
+        self,
+        target_position,
+        target_rotation,
+        target_position_range,
+        reward_type,
+        initial_qpos={},
+        randomize_initial_position=True,
+        randomize_initial_rotation=True,
+        distance_threshold=0.01,
+        rotation_threshold=0.1,
+        n_substeps=20,
+        relative_control=False,
+        ignore_z_target_rotation=False,
+        touch_visualisation="on_touch",
+        touch_get_obs="sensordata",
+        camera_names=None,
+        log_image_keys = None,
+        include_initial_object_state=True,
+        include_teacher_state=True,
+        **kwargs,
+    ):
+        """Initializes a new Hand manipulation environment with touch sensors.
+
+        Args:
+            touch_visualisation (string): how touch sensor sites are visualised
+                - "on_touch": shows touch sensor sites only when touch values > 0
+                - "always": always shows touch sensor sites
+                - "off" or else: does not show touch sensor sites
+            touch_get_obs (string): touch sensor readings
+                - "boolean": returns 1 if touch sensor reading != 0.0 else 0
+                - "sensordata": returns original touch sensor readings from self.sim.data.sensordata[id]
+                - "log": returns log(x+1) touch sensor readings from self.sim.data.sensordata[id]
+                - "off" or else: does not add touch sensor readings to the observation
+
+        """
+        self.touch_visualisation = touch_visualisation
+        self.touch_get_obs = touch_get_obs
+        self._touch_sensor_id_site_id = []
+        self._touch_sensor_id = []
+        self.touch_color = [1, 0, 0, 0.5]
+        self.notouch_color = [0, 0.5, 0, 0.2]
+        self.camera_names = camera_names if camera_names is not None else []
+        self.log_image_keys = log_image_keys if log_image_keys is not None else []
+        self.initial_object_state = None
+        self.include_initial_object_state = include_initial_object_state
+        assert len(self.log_image_keys) == len(self.camera_names)
+
+        self._super_constructor_called = False
+        super().__init__(
+            target_position=target_position,
+            target_rotation=target_rotation,
+            target_position_range=target_position_range,
+            reward_type=reward_type,
+            initial_qpos=initial_qpos,
+            randomize_initial_position=randomize_initial_position,
+            randomize_initial_rotation=randomize_initial_rotation,
+            distance_threshold=distance_threshold,
+            rotation_threshold=rotation_threshold,
+            n_substeps=n_substeps,
+            relative_control=relative_control,
+            ignore_z_target_rotation=ignore_z_target_rotation,
+            **kwargs,
+        )
+        self._super_constructor_called = True
+
+        for (
+            k,
+            v,
+        ) in (
+            self._model_names.sensor_name2id.items()
+        ):  # get touch sensor site names and their ids
+            if "robot0:TS_" in k:
+                self._touch_sensor_id_site_id.append(
+                    (
+                        v,
+                        self._model_names.site_name2id[
+                            k.replace("robot0:TS_", "robot0:T_")
+                        ],
+                    )
+                )
+                self._touch_sensor_id.append(v)
+
+        if self.touch_visualisation == "off":  # set touch sensors rgba values
+            for _, site_id in self._touch_sensor_id_site_id:
+                self.model.site_rgba[site_id][3] = 0.0
+        elif self.touch_visualisation == "always":
+            pass
+        
+        # observation contains 
+        obs_shape = 61 if include_initial_object_state else 48 # robot and initial object state.
+        obs_shape += 7 # goal
+        if include_teacher_state:
+            obs_shape += 13 # current object state
+            obs_shape += 92 # touch sensors
+
+        self.observation_space = spaces.Box(-np.inf, np.inf, shape=(obs_shape,), dtype="float64")
+        
+
+    def _render_callback(self):
+        super()._render_callback()
+        if self.touch_visualisation == "on_touch":
+            for touch_sensor_id, site_id in self._touch_sensor_id_site_id:
+                if self.data.sensordata[touch_sensor_id] != 0.0:
+                    self.model.site_rgba[site_id] = self.touch_color
+                else:
+                    self.model.site_rgba[site_id] = self.notouch_color
+
+    def _get_obs(self):
+        robot_qpos, robot_qvel = self._utils.robot_get_obs(
+            self.model, self.data, self._model_names.joint_names
+        )
+        object_qvel = self._utils.get_joint_qvel(self.model, self.data, "object:joint")
+
+        achieved_goal = (
+            self._get_achieved_goal().ravel()
+        )  # this contains the object position + rotation
+        touch_values = []  # get touch sensor readings. if there is one, set value to 1
+
+        if self.touch_get_obs == "sensordata":
+            touch_values = self.data.sensordata[self._touch_sensor_id]
+        elif self.touch_get_obs == "boolean":
+            touch_values = self.data.sensordata[self._touch_sensor_id] > 0.0
+        elif self.touch_get_obs == "log":
+            touch_values = np.log(self.data.sensordata[self._touch_sensor_id] + 1.0)
+        observation = np.concatenate(
+            [robot_qpos, robot_qvel, object_qvel, achieved_goal, touch_values]
+        )
+        if not self._super_constructor_called:
+            return {
+                "observation": observation.copy(),
+                "achieved_goal": achieved_goal.copy(),
+                "desired_goal": self.goal.ravel().copy(),
+            }
+        else:
+            self._render_callback()
+            obs = {}
+            for c, log in zip(self.camera_names, self.log_image_keys):
+                img = self.mujoco_renderer.render(self.render_mode, camera_name=c)
+                key = f"log_{c}" if log else c
+                obs[key] = img[:,:,None] if self.render_mode == 'depth_array' else img
+
+            
+            obs["observation"] = observation[:48].copy()
+            if self.include_initial_object_state:
+                if self.initial_object_state is None:
+                    self.initial_object_state = observation[48:61]
+                obs["observation"] = np.concatenate([obs["observation"], self.initial_object_state])
+
+            obs.update({
+                "object": observation[48:61].copy(),
+                "touch": observation[61:].copy(),
+                "achieved_goal": achieved_goal.copy(), # needed for reward computation.
+                "desired_goal": self.goal.ravel().copy(),
+            })
+            return obs
+
+    
+    #  BaseRobotEnv methods
+    # -----------------------------
+
+    def step(self, action):
+        """Run one timestep of the environment's dynamics using the agent actions.
+
+        Args:
+            action (np.ndarray): Control action to be applied to the agent and update the simulation. Should be of shape :attr:`action_space`.
+
+        Returns:
+            observation (dictionary): Next observation due to the agent actions .It should satisfy the `GoalEnv` :attr:`observation_space`.
+            reward (integer): The reward as a result of taking the action. This is calculated by :meth:`compute_reward` of `GoalEnv`.
+            terminated (boolean): Whether the agent reaches the terminal state. This is calculated by :meth:`compute_terminated` of `GoalEnv`.
+            truncated (boolean): Whether the truncation condition outside the scope of the MDP is satisfied. Timically, due to a timelimit, but
+            it is also calculated in :meth:`compute_truncated` of `GoalEnv`.
+            info (dictionary): Contains auxiliary diagnostic information (helpful for debugging, learning, and logging). In this case there is a single
+            key `is_success` with a boolean value, True if the `achieved_goal` is the same as the `desired_goal`.
+        """
+        if np.array(action).shape != self.action_space.shape:
+            raise ValueError("Action dimension mismatch")
+
+        action = np.clip(action, self.action_space.low, self.action_space.high)
+        self._set_action(action)
+
+        self._mujoco_step(action)
+
+        self._step_callback()
+
+        if self.render_mode == "human":
+            self.render()
+        obs = self._get_obs()
+
+        info = {
+            "is_success": self._is_success(obs["achieved_goal"], self.goal),
+        }
+        obs["log_is_success"] = np.ones((1,), dtype=np.float64) * info["is_success"]
+
+        is_success = bool(info["is_success"])
+        reward = 10 if is_success else 0
+
+        truncated = self.compute_truncated(obs["achieved_goal"], self.goal, info)
+
+        reward += self.compute_reward(obs["achieved_goal"], self.goal, info)
+
+        terminated = False
+        # if object is close to ground, terminate episode
+        if obs["object"][8] < 0.05:
+            terminated = True
+            reward = -1000
+
+        flat_obs = np.concatenate([obs["observation"], obs["desired_goal"], obs["object"], obs["touch"]])
+        info["is_success"] = 0.0
+        if is_success and not self.episodic_success:
+            info["is_success"] = 1.0
+            self.episodic_success = True
+
+        return flat_obs, reward, terminated, truncated, info
+
+    def reset(
+        self,
+        *,
+        seed: Optional[int] = None,
+        options: Optional[dict] = None,
+    ):
+        """Reset MuJoCo simulation to initial state.
+
+        Note: Attempt to reset the simulator. Since we randomize initial conditions, it
+        is possible to get into a state with numerical issues (e.g. due to penetration or
+        Gimbel lock) or we may not achieve an initial condition (e.g. an object is within the hand).
+        In this case, we just keep randomizing until we eventually achieve a valid initial
+        configuration.
+
+        Args:
+            seed (optional integer): The seed that is used to initialize the environment's PRNG (`np_random`). Defaults to None.
+            options (optional dictionary): Can be used when `reset` is override for additional information to specify how the environment is reset.
+
+        Returns:
+            observation (dictionary) : Observation of the initial state. It should satisfy the `GoalEnv` :attr:`observation_space`.
+            info (dictionary): This dictionary contains auxiliary information complementing ``observation``. It should be analogous to
+                the ``info`` returned by :meth:`step`.
+        """
+        # super().reset(seed=seed)
+        did_reset_sim = False
+        while not did_reset_sim:
+            did_reset_sim = self._reset_sim()
+        self.goal = self._sample_goal().copy()
+
+        self.initial_object_state = None
+        self.episodic_success = False
+
+        obs = self._get_obs()
+        obs["log_is_success"] = np.zeros((1,), dtype=np.float64)
+        if self.render_mode == "human":
+            self.render()
+
+        flat_obs = np.concatenate([obs["observation"], obs["desired_goal"], obs["object"], obs["touch"]])
+        return flat_obs, {"is_success": 0.0}
+
 class MujocoManipulateTouchSensorsEnv(MujocoManipulateEnv):
     def __init__(
         self,

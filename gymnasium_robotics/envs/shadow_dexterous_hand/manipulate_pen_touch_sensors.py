@@ -6,6 +6,7 @@ from gymnasium.utils.ezpickle import EzPickle
 from gymnasium_robotics.envs.shadow_dexterous_hand import (
     MujocoManipulateTouchSensorsEnv,
     PrivilegedMujocoManipulateTouchSensorsEnv,
+    TGRLMujocoManipulateTouchSensorsEnv,
     MujocoPyManipulateTouchSensorsEnv,
 )
 
@@ -40,6 +41,40 @@ class PrivilegedMujocoHandPenTouchSensorsEnv(PrivilegedMujocoManipulateTouchSens
         )
         EzPickle.__init__(
             self, target_position, target_rotation, touch_get_obs, reward_type, camera_names, log_image_keys, **kwargs
+        )
+
+class TGRLMujocoHandPenTouchSensorsEnv(TGRLMujocoManipulateTouchSensorsEnv, EzPickle):
+    def __init__(
+        self,
+        target_position="random",
+        target_rotation="xyz",
+        touch_get_obs="sensordata",
+        reward_type="sparse",
+        camera_names=None,
+        log_image_keys=None,
+        include_initial_object_state=False,
+        include_teacher_state=True,
+        **kwargs,
+    ):
+        TGRLMujocoManipulateTouchSensorsEnv.__init__(
+            self,
+            model_path=MANIPULATE_PEN_XML,
+            touch_get_obs=touch_get_obs,
+            target_rotation=target_rotation,
+            target_position=target_position,
+            target_position_range=np.array([(-0.04, 0.04), (-0.06, 0.02), (0.0, 0.06)]),
+            randomize_initial_rotation=False,
+            reward_type=reward_type,
+            ignore_z_target_rotation=True,
+            distance_threshold=0.05,
+            camera_names=camera_names,
+            log_image_keys=log_image_keys,
+            include_initial_object_state=include_initial_object_state,
+            include_teacher_state=include_teacher_state,
+            **kwargs,
+        )
+        EzPickle.__init__(
+            self, target_position, target_rotation, touch_get_obs, reward_type, camera_names, log_image_keys, include_initial_object_state, include_teacher_state, **kwargs
         )
 
 class MujocoHandPenTouchSensorsEnv(MujocoManipulateTouchSensorsEnv, EzPickle):

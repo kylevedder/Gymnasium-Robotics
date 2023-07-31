@@ -10,5 +10,6 @@ from gymnasium_robotics.envs.shadow_dexterous_hand.manipulate_touch_sensors impo
     MujocoManipulateTouchSensorsEnv,
     PrivilegedMujocoManipulateTouchSensorsEnv,
     HORAPrivilegedMujocoManipulateTouchSensorsEnv,
+    TGRLMujocoManipulateTouchSensorsEnv,
     MujocoPyManipulateTouchSensorsEnv,
 )

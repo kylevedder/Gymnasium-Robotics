@@ -1702,6 +1702,19 @@ def register_robotics_envs():
             "obj_range": 0.07,
         },
     )
+    register(
+        id=f"HORAFixedToHand7cmPick5cmPlace-v0",
+        entry_point="gymnasium_robotics.envs.fetch.blind_pick_place_hora:FetchBlindPickPlaceEnv",
+        max_episode_steps=100,
+        disable_env_checker=True,
+        kwargs={
+            "camera_names": ["gripper_camera_rgb"],
+            "width": 32,
+            "height": 32,
+            "render_mode": "rgb_array",
+            "obj_range": 0.07,
+        },
+    )
 
     # Pick and Place, Hand Cam -> Fixed Cam Policy
     for difficulty in [0.07]:
@@ -1727,6 +1740,19 @@ def register_robotics_envs():
             "camera_names": ["camera_front"],
             "width": 64,
             "height": 64,
+            "render_mode": "rgb_array",
+            "obj_range": 0.07,
+        },
+    )
+    register(
+        id=f"HORAHandToFixed7cmPick5cmPlace-v0",
+        entry_point="gymnasium_robotics.envs.fetch.blind_pick_place_hora:FetchBlindPickPlaceEnv",
+        max_episode_steps=100,
+        disable_env_checker=True,
+        kwargs={
+            "camera_names": ["camera_front"],
+            "width": 32,
+            "height": 32,
             "render_mode": "rgb_array",
             "obj_range": 0.07,
         },

@@ -7,11 +7,72 @@ from gymnasium_robotics.envs.shadow_dexterous_hand import (
     MujocoManipulateTouchSensorsEnv,
     PrivilegedMujocoManipulateTouchSensorsEnv,
     TGRLMujocoManipulateTouchSensorsEnv,
+    HORAPrivilegedMujocoManipulateTouchSensorsEnv,
     MujocoPyManipulateTouchSensorsEnv,
 )
 
 # Ensure we get the path separator correct on windows
 MANIPULATE_PEN_XML = os.path.join("hand", "manipulate_pen_touch_sensors.xml")
+
+class HORAPrivilegedMujocoHandPenTouchSensorsEnv(HORAPrivilegedMujocoManipulateTouchSensorsEnv, EzPickle):
+    def __init__(
+        self,
+        target_position="random",
+        target_rotation="xyz",
+        touch_get_obs="sensordata",
+        reward_type="sparse",
+        camera_names=None,
+        log_image_keys=None,
+        **kwargs,
+    ):
+        HORAPrivilegedMujocoManipulateTouchSensorsEnv.__init__(
+            self,
+            model_path=MANIPULATE_PEN_XML,
+            touch_get_obs=touch_get_obs,
+            target_rotation=target_rotation,
+            target_position=target_position,
+            target_position_range=np.array([(-0.04, 0.04), (-0.06, 0.02), (0.0, 0.06)]),
+            randomize_initial_rotation=False,
+            reward_type=reward_type,
+            ignore_z_target_rotation=True,
+            distance_threshold=0.05,
+            camera_names=camera_names,
+            log_image_keys=log_image_keys,
+            **kwargs,
+        )
+        EzPickle.__init__(
+            self, target_position, target_rotation, touch_get_obs, reward_type, camera_names, log_image_keys, **kwargs
+        )
+
+class PrivilegedMujocoHandPenTouchSensorsEnv(PrivilegedMujocoManipulateTouchSensorsEnv, EzPickle):
+    def __init__(
+        self,
+        target_position="random",
+        target_rotation="xyz",
+        touch_get_obs="sensordata",
+        reward_type="sparse",
+        camera_names=None,
+        log_image_keys=None,
+        **kwargs,
+    ):
+        PrivilegedMujocoManipulateTouchSensorsEnv.__init__(
+            self,
+            model_path=MANIPULATE_PEN_XML,
+            touch_get_obs=touch_get_obs,
+            target_rotation=target_rotation,
+            target_position=target_position,
+            target_position_range=np.array([(-0.04, 0.04), (-0.06, 0.02), (0.0, 0.06)]),
+            randomize_initial_rotation=False,
+            reward_type=reward_type,
+            ignore_z_target_rotation=True,
+            distance_threshold=0.05,
+            camera_names=camera_names,
+            log_image_keys=log_image_keys,
+            **kwargs,
+        )
+        EzPickle.__init__(
+            self, target_position, target_rotation, touch_get_obs, reward_type, camera_names, log_image_keys, **kwargs
+        )
 
 class PrivilegedMujocoHandPenTouchSensorsEnv(PrivilegedMujocoManipulateTouchSensorsEnv, EzPickle):
     def __init__(

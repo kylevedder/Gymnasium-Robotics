@@ -294,6 +294,13 @@ class VIPRewardBlindPick(FetchBlindPickEnv):
         elif self.aggregation == 'min':
             final_reward = np.min(list(reward_per_image.values()))
 
+        # give bonus if gripper is closed around block and in the correct position.
+        gripper_offset = np.array([0.03, 0, 0.02])
+        term = False
+        if obs["touch"].all() and np.linalg.norm(self.goal - (obs["robot_state"][:3] + gripper_offset)) < 0.05:
+            final_reward += 100000
+            term = True
+
         return obs, final_reward, term, trunc, info
 
 
@@ -333,7 +340,7 @@ if __name__ == "__main__":
     import imageio
     cam_keys = ["camera_side", "camera_front", "gripper_camera_rgb"]
     # env = FetchBlindPickEnv(cam_keys, "dense", render_mode="rgb_array", width=32, height=32, obj_range=0.001)
-    env = VIPRewardBlindPick(image_keys=["camera_front"], goal_img_paths=["./blindpick_final_camera_front.png"], device='cuda:0',  camera_names=cam_keys, reward_type="dense", render_mode="rgb_array", width=32, height=32, obj_range=0.001)
+    env = VIPRewardBlindPick(image_keys=["camera_front"], goal_img_paths=["./blindpick_final_camera_front.png"], device='cpu',  camera_names=cam_keys, reward_type="dense", render_mode="rgb_array", width=32, height=32, obj_range=0.001)
     import ipdb; ipdb.set_trace()
 
     # imgs = []

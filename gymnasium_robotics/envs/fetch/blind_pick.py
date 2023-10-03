@@ -15,6 +15,7 @@ import torch
 import torchvision.transforms as T
 from vip import load_vip
 import torch
+from copy import deepcopy
 
 # Ensure we get the path separator correct on windows
 MODEL_XML_PATH = os.path.join("fetch", "blind_pick.xml")
@@ -275,7 +276,7 @@ class VIPRewardBlindPick(FetchBlindPickEnv):
         for k in obs.keys():
             if k not in self.image_keys:
                 continue
-            img = cv2.cvtColor(np.array(obs[k].copy()), cv2.COLOR_RGB2BGR)
+            img = cv2.cvtColor(deepcopy(obs[k]), cv2.COLOR_RGB2BGR)
             img_cur = self.vip_transform(Image.fromarray(img.astype(np.uint8))).unsqueeze(0)
             with torch.no_grad():
                 embeddings = self.vip_model(img_cur.to(self.device))

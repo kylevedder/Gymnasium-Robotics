@@ -194,6 +194,10 @@ class FetchBlindPickPlaceEnv(MujocoFetchEnv, EzPickle):
         if self.render_mode == "human":
             self.render()
         obs = self._get_obs()
+        # update history buffer
+        self.history_buffer[1:] = self.history_buffer[:-1]
+        self.history_buffer[0] = obs["obs"]
+        obs["proprio_hist"] = self.history_buffer.copy()
 
         curr_eef_state = self._utils.get_site_xpos(self.model, self.data, 'robot0:grip').copy()
         obj0_pos = self._utils.get_site_xpos(self.model, self.data, "object0").copy()
@@ -226,7 +230,6 @@ class FetchBlindPickPlaceEnv(MujocoFetchEnv, EzPickle):
 
             # lifting to midpoint reward
             midpoint_reward = 0
-            import ipdb; ipdb.set_trace()
             if np.all(obs["obs"][10:12]):
                 midpoint = np.array([1.42,0.75,0.6])
                 midpoint_dist = np.linalg.norm(obj0_pos - midpoint)
@@ -266,6 +269,10 @@ class FetchBlindPickPlaceEnv(MujocoFetchEnv, EzPickle):
         if self.render_mode == "human":
             self.render()
 
+        # clear history buffer.
+        self.history_buffer[:] = 0
+        self.history_buffer[0] = obs["obs"]
+        obs["proprio_hist"] = self.history_buffer.copy()
         return obs, {}
 
     def close(self):

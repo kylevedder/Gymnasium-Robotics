@@ -3,10 +3,18 @@ import os
 import numpy as np
 import mujoco
 
-from gymnasium import spaces
+from gymnasium import spaces 
 from gymnasium.utils.ezpickle import EzPickle
 
 from gymnasium_robotics.envs.fetch import MujocoFetchEnv, goal_distance
+
+# for VIP reward.
+import cv2
+from PIL import Image  
+import torch
+import torchvision.transforms as T
+from vip import load_vip
+import torch
 
 # Ensure we get the path separator correct on windows
 MODEL_XML_PATH = os.path.join("fetch", "blind_pick.xml")
@@ -233,83 +241,153 @@ class FetchBlindPickEnv(MujocoFetchEnv, EzPickle):
         pass
 
 
+class VIPRewardBlindPick(FetchBlindPickEnv):
+
+    def __init__(self, image_keys, goal_img_paths, aggregation='mean', device='cpu', **kwargs):
+
+        super().__init__(**kwargs)
+        self.image_keys = image_keys
+        assert len(image_keys) > 0
+        assert len(goal_img_paths) == len(image_keys) # currently assumes 1:1 mapping between image keys to goal images, but can be 1:N.
+
+        self.vip_model = load_vip()
+        self.vip_transform = T.Compose([T.Resize(256),
+                        T.CenterCrop(224),
+                        T.ToTensor()])
+        self.aggregation = aggregation
+        self.device = device
+        # store the goal embedding.
+        self.goal_embeddings = {}
+        for image_key, goal_path in zip(image_keys, goal_img_paths):
+            # import ipdb; ipdb.set_trace()
+            img = cv2.imread(goal_path) # BGR format.
+            # img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+            img_cur = self.vip_transform(Image.fromarray(img)).unsqueeze(0)
+            with torch.no_grad():
+                embedding = self.vip_model(img_cur.to(self.device))
+                self.goal_embeddings[image_key] = embedding.cpu().numpy()
+
+    
+    def step(self, action):
+        obs, reward, term, trunc, info = super().step(action)
+        reward_per_image = {}
+        for k in obs.keys():
+            if k not in self.image_keys:
+                continue
+            img = cv2.cvtColor(obs[k], cv2.COLOR_BGR2RGB)
+            img_cur = self.vip_transform(Image.fromarray(img.astype(np.uint8))).unsqueeze(0)
+            with torch.no_grad():
+                embeddings = self.vip_model(img_cur.to(self.device))
+                embeddings = embeddings.cpu().numpy()
+            distance = np.linalg.norm(embeddings - self.goal_embeddings[k])
+            reward_per_image[k] = -distance
+            # update info with reward per image
+            info[f'{k}_reward'] = reward_per_image[k]
+
+
+        if self.aggregation == 'mean':
+            final_reward = np.mean(list(reward_per_image.values()))
+        elif self.aggregation == 'max':
+            final_reward = np.max(list(reward_per_image.values()))
+        elif self.aggregation == 'min':
+            final_reward = np.min(list(reward_per_image.values()))
+
+        return obs, final_reward, term, trunc, info
+
+
 
 if __name__ == "__main__":
-    import imageio
-    env = FetchBlindPickEnv(["camera_side","camera_front", "gripper_camera_rgb"], "dense", render_mode="rgb_array", width=32, height=32, obj_range=0.15)
-    imgs = []
-    def process_depth(depth):
-        # depth -= depth.min()
-        # depth /= 2*depth[depth <= 1].mean()
-        # pixels = 255*np.clip(depth, 0, 1)
-        # pixels = pixels.astype(np.uint8)
-        # return pixels
-        return depth
-    for _ in range(100):
-        obs,_ = env.reset()
-        imgs.append(np.concatenate([obs['camera_side'], obs['camera_front'], obs['gripper_camera_rgb']], axis=1))
-        # for i in range(10):
-        #     obs, *_ = env.step(env.action_space.sample())
-        #     imgs.append(np.concatenate([obs['camera_side'], obs['camera_front'], obs['gripper_camera_rgb']], axis=1))
-    imageio.mimwrite("test.gif", imgs)
-        # open the gripper and descend
-        # for i in range(100):
-        #     obs, rew, term, trunc, info = env.step(np.array([0, -1.0, 0, 1.0]))
-        #     print(rew)
-    # close gripper
-    # for i in range(10):
-    #     obs, rew, term, trunc, info= env.step(np.array([0,0,0.0,-1.0]))
-    #     print(rew)
-    # # # lift up cube
-    # for i in range(10):
-    #     obs, rew, term, trunc, info = env.step(np.array([0,0,1.0,-1.0]))
-    #     print(rew)
-    #     if term:
-    #         break
-    
-    # import ipdb; ipdb.set_trace()
+    # import omegaconf
+    # import hydra
+    # import torch
+    # import torchvision.transforms as T
+    # import numpy as np
+    # from PIL import Image
 
+    # from vip import load_vip
+
+    # if torch.cuda.is_available():
+    #     device = "cuda"
+    # else:
+    #     device = "cpu"
+
+    # vip = load_vip()
+    # vip.eval()
+    # vip.to(device)
+
+    # ## DEFINE PREPROCESSING
+    # transforms = T.Compose([T.Resize(256),
+    #     T.CenterCrop(224),
+    #     T.ToTensor()]) # ToTensor() divides by 255
+
+    # ## ENCODE IMAGE
+    # image = np.random.randint(0, 255, (500, 500, 3))
+    # preprocessed_image = transforms(Image.fromarray(image.astype(np.uint8))).reshape(-1, 3, 224, 224)
+    # preprocessed_image.to(device) 
+    # with torch.no_grad():
+    #     embedding = vip(preprocessed_image * 255.0) ## vip expects image input to be [0-255]
+    # print(embedding.shape) # [1, 1024]
+
+    import imageio
+    cam_keys = ["camera_side", "camera_front", "gripper_camera_rgb"]
+    # env = FetchBlindPickEnv(cam_keys, "dense", render_mode="rgb_array", width=32, height=32, obj_range=0.001)
+    env = VIPReward(image_keys=["camera_front"], goal_img_paths=["./blindpick_final_camera_front.png"],  camera_names=cam_keys, reward_type="dense", render_mode="rgb_array", width=32, height=32, obj_range=0.001)
+    import ipdb; ipdb.set_trace()
 
     # imgs = []
-    # import imageio
     # obs, _ = env.reset()
-    # for i in range(1000):
-    #     obs, _ = env.step(env.action_space.sample())
+
+
+
+    # def process_depth(depth):
+    #     # depth -= depth.min()
+    #     # depth /= 2*depth[depth <= 1].mean()
+    #     # pixels = 255*np.clip(depth, 0, 1)
+    #     # pixels = pixels.astype(np.uint8)
+    #     # return pixels
+    #     return depth
+    # for _ in range(100):
+    #     obs,_ = env.reset()
+    #     imgs.append(np.concatenate([obs['camera_side'], obs['camera_front'], obs['gripper_camera_rgb']], axis=1))
+    #     # for i in range(10):
+    #     #     obs, *_ = env.step(env.action_space.sample())
+    #     #     imgs.append(np.concatenate([obs['camera_side'], obs['camera_front'], obs['gripper_camera_rgb']], axis=1))
+    # imageio.mimwrite("test.gif", imgs)
+    from collections import defaultdict
+    demo = defaultdict(list)
+    for i in range(1):
+        obs, _ = env.reset()
+        for k in obs.keys():
+            if k in cam_keys:
+                demo[k].append(obs[k])
+        # open the gripper and descend
+        for i in range(10):
+            obs, rew, term, trunc, info = env.step(np.array([-0.1, 0.0, -1, 1.0]))
+            for k in obs.keys():
+                if k in cam_keys:
+                    demo[k].append(obs[k])
+            # print(rew)
+        # close gripper
+        for i in range(10):
+            obs, rew, term, trunc, info= env.step(np.array([0,0,0.0,-1.0]))
+            for k in obs.keys():
+                if k in cam_keys:
+                    demo[k].append(obs[k])
+            print(rew)
+        # lift up cube
+        for i in range(10):
+            obs, rew, term, trunc, info = env.step(np.array([0,0,1.0,-1.0]))
+            for k in obs.keys():
+                if k in cam_keys:
+                    demo[k].append(obs[k])
+            print(rew)
+            if term:
+                for k in cam_keys:
+                    imageio.imwrite(f'blindpick_final_{k}.png', obs[k])
+                break
+
+    # save each key as a mp4 with imageio                
+    for k, v in demo.items():
+        imageio.mimwrite(f"{k}.mp4", v)
 
     # import ipdb; ipdb.set_trace()
-    # imgs.append(obs["external_camera_0"])
-    # imageio.mimwrite("test.gif", imgs)
-        # env.step(np.array([0, 0, 1, 0]))
-        # env.render()
-    # for i in range(1):
-    #     obs, _ = env.reset()
-    #     env.render()
-    #     # go to the first corner
-    #     returns = 0
-    #     for i in range(7):
-    #         obs, rew, trunc, term, info =  env.step(np.array([-0.2, 0.2, 0, 0]))
-    #         # env.render()
-    #         print(f"step {i}", rew, info['is_success'], obs[6:9])
-    #         returns += rew
-
-    #     # go to the 2nd corner
-    #     for i in range(7):
-    #         obs, rew, trunc, term, info =  env.step(np.array([0, -1., 0, 0]))
-    #         # env.render()
-    #         print(f"step {i}", rew, info['is_success'], obs[6:9])
-    #         returns += rew
-
-    #     # go to the 3rd corner
-    #     for i in range(7):
-    #         obs, rew, trunc, term, info =  env.step(np.array([1, 0., 0, 0]))
-    #         # env.render()
-    #         print(f"step {i}", rew, info['is_success'], obs[6:9])
-    #         returns += rew
-
-    #     # go to the 4th corner
-    #     for i in range(7):
-    #         obs, rew, trunc, term, info =  env.step(np.array([0, 1, 0, 0]))
-    #         # env.render()
-    #         print(f"step {i}", rew, info['is_success'], obs[6:9])
-    #         returns += rew
-    #     print("return", returns)

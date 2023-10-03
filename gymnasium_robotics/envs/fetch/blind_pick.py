@@ -259,8 +259,9 @@ class VIPRewardBlindPick(FetchBlindPickEnv):
         # store the goal embedding.
         self.goal_embeddings = {}
         for image_key, goal_path in zip(image_keys, goal_img_paths):
-            # import ipdb; ipdb.set_trace()
-            img = cv2.imread(goal_path) # BGR format.
+            directory_path = os.path.dirname(__file__)
+            path = os.path.join(directory_path, goal_path)
+            img = cv2.imread(path) # BGR format.
             # img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
             img_cur = self.vip_transform(Image.fromarray(img)).unsqueeze(0)
             with torch.no_grad():
@@ -274,7 +275,7 @@ class VIPRewardBlindPick(FetchBlindPickEnv):
         for k in obs.keys():
             if k not in self.image_keys:
                 continue
-            img = cv2.cvtColor(obs[k], cv2.COLOR_BGR2RGB)
+            img = cv2.cvtColor(np.array(obs[k].copy()), cv2.COLOR_RGB2BGR)
             img_cur = self.vip_transform(Image.fromarray(img.astype(np.uint8))).unsqueeze(0)
             with torch.no_grad():
                 embeddings = self.vip_model(img_cur.to(self.device))
@@ -331,7 +332,7 @@ if __name__ == "__main__":
     import imageio
     cam_keys = ["camera_side", "camera_front", "gripper_camera_rgb"]
     # env = FetchBlindPickEnv(cam_keys, "dense", render_mode="rgb_array", width=32, height=32, obj_range=0.001)
-    env = VIPReward(image_keys=["camera_front"], goal_img_paths=["./blindpick_final_camera_front.png"],  camera_names=cam_keys, reward_type="dense", render_mode="rgb_array", width=32, height=32, obj_range=0.001)
+    env = VIPRewardBlindPick(image_keys=["camera_front"], goal_img_paths=["./blindpick_final_camera_front.png"], device='cuda:0',  camera_names=cam_keys, reward_type="dense", render_mode="rgb_array", width=32, height=32, obj_range=0.001)
     import ipdb; ipdb.set_trace()
 
     # imgs = []
@@ -355,7 +356,7 @@ if __name__ == "__main__":
     # imageio.mimwrite("test.gif", imgs)
     from collections import defaultdict
     demo = defaultdict(list)
-    for i in range(1):
+    while True:
         obs, _ = env.reset()
         for k in obs.keys():
             if k in cam_keys:
@@ -382,8 +383,8 @@ if __name__ == "__main__":
                     demo[k].append(obs[k])
             print(rew)
             if term:
-                for k in cam_keys:
-                    imageio.imwrite(f'blindpick_final_{k}.png', obs[k])
+                # for k in cam_keys:
+                #     imageio.imwrite(f'blindpick_final_{k}.png', obs[k])
                 break
 
     # save each key as a mp4 with imageio                

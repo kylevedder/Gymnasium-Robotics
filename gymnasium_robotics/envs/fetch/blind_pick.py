@@ -247,6 +247,9 @@ class VIPRewardBlindPick(FetchBlindPickEnv):
     def __init__(self, image_keys, goal_img_paths, aggregation='mean', device='cpu', **kwargs):
 
         super().__init__(**kwargs)
+        # update observation space dict to have a `log_success` key.
+        self.observation_space.spaces['log_success'] = spaces.Box(-np.inf, np.inf, dtype="float32")
+
         self.image_keys = image_keys
         assert len(image_keys) > 0
         assert len(goal_img_paths) == len(image_keys) # currently assumes 1:1 mapping between image keys to goal images, but can be 1:N.
@@ -269,7 +272,11 @@ class VIPRewardBlindPick(FetchBlindPickEnv):
                 embedding = self.vip_model(img_cur.to(self.device))
                 self.goal_embeddings[image_key] = embedding.cpu().numpy()
 
-    
+    def reset(self, **kwargs): 
+        obs, info = super().reset(**kwargs)
+        obs["log_success"] = 0.0
+        return obs, info
+
     def step(self, action):
         obs, reward, term, trunc, info = super().step(action)
         reward_per_image = {}
@@ -297,10 +304,12 @@ class VIPRewardBlindPick(FetchBlindPickEnv):
         # give bonus if gripper is closed around block and in the correct position.
         gripper_offset = np.array([0.03, 0, 0.02])
         term = False
+        success = False
         if obs["touch"].all() and np.linalg.norm(self.goal - (obs["robot_state"][:3] + gripper_offset)) < 0.05:
             final_reward += 100000
             term = True
-
+            success = True
+        obs["log_success"] = float(success)
         return obs, final_reward, term, trunc, info
 
 

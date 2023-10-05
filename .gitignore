@@ -5,7 +5,8 @@
 .cache
 .pytest_cache/
 videos/
-test.mp4
+*.mp4
+*.gif
 
 # Setuptools distribution and build folders.
 /dist/
@@ -45,3 +46,7 @@ vizdoom.ini
 docs/envs/**/*.*
 !docs/envs/**/index.md
 _build/
+
+# misc
+docker_history.txt
+pretrained_weights/

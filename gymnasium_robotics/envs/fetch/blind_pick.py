@@ -1,12 +1,12 @@
 import os
-
 import numpy as np
 import mujoco
-
+from pathlib import Path
 from gymnasium import spaces 
 from gymnasium.utils.ezpickle import EzPickle
 
 from gymnasium_robotics.envs.fetch import MujocoFetchEnv, goal_distance
+from gymnasium_robotics.utils.flow import RAFTWrapper
 
 # for VIP reward.
 import cv2
@@ -16,15 +16,17 @@ import torchvision.transforms as T
 from vip import load_vip
 import torch
 from copy import deepcopy
+from typing import Dict, List
+import tqdm
 
 # Ensure we get the path separator correct on windows
 MODEL_XML_PATH = os.path.join("fetch", "blind_pick.xml")
 
 
 class FetchBlindPickEnv(MujocoFetchEnv, EzPickle):
-    metadata = {"render_modes": ["rgb_array", "depth_array"], 'render_fps': 25}
+    metadata = {"render_modes": ["rgb_array", "depth_array"], 'render_fps': 50}
     render_mode = "rgb_array"
-    def __init__(self, camera_names=None, reward_type="dense", obj_range=0.07, include_obj_state=False, **kwargs):
+    def __init__(self, camera_names=None, reward_type="dense", obj_range=0.07, include_obj_state=False, n_substeps=20, **kwargs):
         initial_qpos = {
             "robot0:slide0": 0.405,
             "robot0:slide1": 0.48,
@@ -43,7 +45,7 @@ class FetchBlindPickEnv(MujocoFetchEnv, EzPickle):
             model_path=MODEL_XML_PATH,
             has_object=True,
             block_gripper=False,
-            n_substeps=20,
+            n_substeps=n_substeps,
             gripper_extra_height=0.2,
             target_in_the_air=False,
             target_offset=0.0,
@@ -314,6 +316,8 @@ class VIPRewardBlindPick(FetchBlindPickEnv):
 
 
 
+
+
 if __name__ == "__main__":
     # import omegaconf
     # import hydra
@@ -324,11 +328,15 @@ if __name__ == "__main__":
 
     # from vip import load_vip
 
-    # if torch.cuda.is_available():
-    #     device = "cuda"
-    # else:
-    #     device = "cpu"
+    cam_keys = ["camera_side", "camera_front", "gripper_camera_rgb"]
 
+    if torch.cuda.is_available():
+        device = "cuda"
+    else:
+        device = "cpu"
+    
+
+    raft_wrapper = RAFTWrapper(Path("/RAFT/models/raft-things.pth"), camera_keys=cam_keys, device=device)
     # vip = load_vip()
     # vip.eval()
     # vip.to(device)
@@ -347,30 +355,35 @@ if __name__ == "__main__":
     # print(embedding.shape) # [1, 1024]
 
     import imageio
-    cam_keys = ["camera_side", "camera_front", "gripper_camera_rgb"]
     # env = FetchBlindPickEnv(cam_keys, "dense", render_mode="rgb_array", width=32, height=32, obj_range=0.001)
-    env = VIPRewardBlindPick(image_keys=["camera_front"], goal_img_paths=["./blindpick_final_camera_front.png"], device='cpu',  camera_names=cam_keys, reward_type="dense", render_mode="rgb_array", width=32, height=32, obj_range=0.001)
-    import ipdb; ipdb.set_trace()
+    env = VIPRewardBlindPick(image_keys=["camera_front"], goal_img_paths=["./blindpick_final_camera_front.png"], device=device,  camera_names=cam_keys, reward_type="dense", render_mode="rgb_array", width=256, height=256, obj_range=0.001, n_substeps=10)
 
-    # imgs = []
-    # obs, _ = env.reset()
-
+    imgs = []
+    obs, _ = env.reset()
 
 
-    # def process_depth(depth):
-    #     # depth -= depth.min()
-    #     # depth /= 2*depth[depth <= 1].mean()
-    #     # pixels = 255*np.clip(depth, 0, 1)
-    #     # pixels = pixels.astype(np.uint8)
-    #     # return pixels
-    #     return depth
-    # for _ in range(100):
-    #     obs,_ = env.reset()
-    #     imgs.append(np.concatenate([obs['camera_side'], obs['camera_front'], obs['gripper_camera_rgb']], axis=1))
-    #     # for i in range(10):
-    #     #     obs, *_ = env.step(env.action_space.sample())
-    #     #     imgs.append(np.concatenate([obs['camera_side'], obs['camera_front'], obs['gripper_camera_rgb']], axis=1))
-    # imageio.mimwrite("test.gif", imgs)
+    for _ in tqdm.tqdm(range(3)):
+        obs,_ = env.reset()
+        raft_wrapper(obs)
+        for i in range(10):
+            
+            
+
+            obs, rew, term, trunc, info= env.step(np.array([-0.1,0,-1,-1.0]))
+            # obs, *_ = env.step(env.action_space.sample())
+            obs = raft_wrapper(obs)
+            full_obs_keys = ['camera_side', 'camera_front', 'gripper_camera_rgb', 'camera_side_flow', 'camera_front_flow', 'gripper_camera_rgb_flow']
+            concatenated_obs = np.concatenate([obs[k] for k in full_obs_keys], axis=1)
+            imgs.append(concatenated_obs)
+    
+
+    # Convert from float to uint8
+    imgs = np.array(imgs)
+    imgs = (imgs * 255).astype(np.uint8)
+    imageio.mimwrite("test.mp4", imgs)
+
+    exit(0)
+
     from collections import defaultdict
     demo = defaultdict(list)
     while True:

@@ -46,6 +46,9 @@ RUN apt update --fix-missing
 RUN apt install -y qt5-default
 RUN apt install -y nano
 
+RUN pip install --upgrade "jax[cuda11_local]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+RUN pip install tensorflow-cpu tensorflow_probability
+RUN pip install crafter cloudpickle optax rich ruamel.yaml
 # Add the project to the PYTHONPATH so that we can import modules from it
 ENV PYTHONPATH=/project:/:/RAFT/core/:${PYTHONPATH}
 # Add the modified bashrc to the container so we get a nice prompt and persistent history

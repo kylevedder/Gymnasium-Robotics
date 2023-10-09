@@ -7,15 +7,17 @@ from gymnasium import spaces
 from gymnasium.utils.ezpickle import EzPickle
 
 from gymnasium_robotics.envs.fetch import MujocoFetchEnv, goal_distance
+from gymnasium_robotics.utils.flow import RAFTWrapper
+from pathlib import Path
 
 # Ensure we get the path separator correct on windows
 MODEL_XML_PATH = os.path.join("fetch", "rotating_pick.xml")
 
 
 class FetchRotatingPickEnv(MujocoFetchEnv, EzPickle):
-    metadata = {"render_modes": ["rgb_array", "depth_array"], 'render_fps': 25}
+    metadata = {"render_modes": ["rgb_array", "depth_array"], 'render_fps': 50}
     render_mode = "rgb_array"
-    def __init__(self, camera_names=None, reward_type="dense", obj_range=0.07, table_rotation_range=5, include_obj_state=False, **kwargs):
+    def __init__(self, camera_names=None, reward_type="dense", obj_range=0.07, table_rotation_range=10, include_obj_state=False, n_substeps=20, **kwargs):
         initial_qpos = {
             "robot0:slide0": 0.405,
             "robot0:slide1": 0.48,
@@ -35,7 +37,7 @@ class FetchRotatingPickEnv(MujocoFetchEnv, EzPickle):
             model_path=MODEL_XML_PATH,
             has_object=True,
             block_gripper=False,
-            n_substeps=20,
+            n_substeps=n_substeps,
             gripper_extra_height=0.2,
             target_in_the_air=False,
             target_offset=0.0,
@@ -225,7 +227,13 @@ class FetchRotatingPickEnv(MujocoFetchEnv, EzPickle):
     ):
         # removed super.reset call
         # decide rotational velocity of the table
-        self.table_rotation_vel = self.np_random.uniform(-self.table_rotation_range, self.table_rotation_range)
+        
+
+        # Check if self.table_rotation_range is a function
+        if callable(self.table_rotation_range):
+            self.table_rotation_vel =  self.table_rotation_range(self.np_random)
+        else:
+            self.table_rotation_vel = self.np_random.uniform(-self.table_rotation_range, self.table_rotation_range)
         did_reset_sim = False
         while not did_reset_sim:
             did_reset_sim = self._reset_sim()
@@ -271,9 +279,39 @@ if __name__ == "__main__":
     #     embedding = vip(preprocessed_image * 255.0) ## vip expects image input to be [0-255]
     # print(embedding.shape) # [1, 1024]
 
+    import torch
+    cam_keys = ["camera_side", "camera_front", "gripper_camera_rgb"]
+
+    if torch.cuda.is_available():
+        device = "cuda"
+    else:
+        device = "cpu"
+
+    raft_wrapper = RAFTWrapper(Path("/RAFT/models/raft-things.pth"), camera_keys=cam_keys, device=device, downsample_multiplier=4)
+
     import imageio
-    cam_keys = ["camera_front", "camera_front_2"]
-    env = FetchRotatingPickEnv(cam_keys, "dense", render_mode="human", width=32, height=32, obj_range=0.1)
+
+    def velocity_sampler(rng):
+        value = rng.uniform(-10, 10)
+        value_sign = np.sign(value)
+
+        return value + value_sign * 10
+
+    # cam_keys = ["camera_front", "camera_front_2"]
+    env = FetchRotatingPickEnv(cam_keys, "dense", 
+                               render_mode="rgb_array", 
+                               table_rotation_range=velocity_sampler, 
+                               width=256, 
+                               height=256, 
+                               obj_range=0.1, 
+                               n_substeps=10)
+
+
+    def is_save_key(k):
+        for cam_key in cam_keys:
+            if cam_key in k:
+                return True
+        return False
 
     # imgs = []
     # obs, _ = env.reset()
@@ -294,12 +332,34 @@ if __name__ == "__main__":
     #     #     obs, *_ = env.step(env.action_space.sample())
     #     #     imgs.append(np.concatenate([obs['camera_side'], obs['camera_front'], obs['gripper_camera_rgb']], axis=1))
     # imageio.mimwrite("test.gif", imgs)
+    
+    import tqdm
+    imgs = []
+    for _ in tqdm.tqdm(range(10)):
+        obs,_ = env.reset()
+        raft_wrapper(obs)
+        for i in range(10):
+            obs, rew, term, trunc, info= env.step(np.array([-0.1,0,-1,-1.0]))
+            # obs, *_ = env.step(env.action_space.sample())
+            obs = raft_wrapper(obs)
+            full_obs_keys = ['camera_side', 'camera_front', 'gripper_camera_rgb', 'camera_side_flow', 'camera_front_flow', 'gripper_camera_rgb_flow']
+            concatenated_obs = np.concatenate([obs[k] for k in full_obs_keys], axis=1)
+            imgs.append(concatenated_obs)
+    
+
+    # Convert from float to uint8
+    imgs = np.array(imgs)
+    imageio.mimwrite("test.mp4", imgs)
+    exit(0)
+    
+    
     from collections import defaultdict
     demo = defaultdict(list)
-    while True:
+    for episode_idx in range(5):
         obs, _ = env.reset()
+        obs = raft_wrapper(obs)
         for k in obs.keys():
-            if k in cam_keys:
+            if is_save_key(k):
                 demo[k].append(obs[k])
         # open the gripper and descend
         # for i in range(10):
@@ -311,15 +371,17 @@ if __name__ == "__main__":
         # close gripper
         for i in range(10):
             obs, rew, term, trunc, info= env.step(np.array([0,0,0.0,-1.0]))
+            obs = raft_wrapper(obs)
             for k in obs.keys():
-                if k in cam_keys:
+                if is_save_key(k):
                     demo[k].append(obs[k])
             print(rew)
         # lift up cube
         for i in range(10):
             obs, rew, term, trunc, info = env.step(np.array([0,0,1.0,-1.0]))
+            obs = raft_wrapper(obs)
             for k in obs.keys():
-                if k in cam_keys:
+                if is_save_key(k):
                     demo[k].append(obs[k])
             print(rew)
             if term:

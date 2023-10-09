@@ -104,7 +104,7 @@ class FetchRotatingPickEnv(MujocoFetchEnv, EzPickle):
         self._mujoco.mj_forward(self.model, self.data)
         return True
     
-    def _get_obs(self):
+    def _get_obs(self, reset:bool = False):
         obs = {}
         if hasattr(self, "mujoco_renderer"):
             self._render_callback()
@@ -113,7 +113,7 @@ class FetchRotatingPickEnv(MujocoFetchEnv, EzPickle):
                 obs[c] = img[:,:,None] if self.render_mode == 'depth_array' else img
 
             # Add the flow images to the obs dict, and downscale if necessary
-            obs = self.flow_wrapper(obs)
+            obs = self.flow_wrapper(obs, reset=reset)
 
             touch_left_finger = False
             touch_right_finger = False
@@ -246,7 +246,7 @@ class FetchRotatingPickEnv(MujocoFetchEnv, EzPickle):
         while not did_reset_sim:
             did_reset_sim = self._reset_sim()
         self.goal = self._sample_goal().copy()
-        obs = self._get_obs()
+        obs = self._get_obs(reset=True)
         if self.render_mode == "human":
             self.render()
 

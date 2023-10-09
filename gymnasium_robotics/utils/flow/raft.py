@@ -31,14 +31,17 @@ class RAFTWrapper:
         assert downsample_multiplier in [1, 2, 4, 8, 16, 32, 64, 128, 256]
         self.downsample_multiplier = downsample_multiplier
 
-    def __call__(self, input_obs_dict : Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
+    def __call__(self, input_obs_dict : Dict[str, np.ndarray], reset: bool = False) -> Dict[str, np.ndarray]:
+
+        if reset:
+            self.prior_obs_dict = None
 
         def key_to_flow_key(k : str):
             return k + "_flow"
 
         if self.prior_obs_dict is None:
             self.prior_obs_dict = input_obs_dict
-            return dict({key_to_flow_key(k) : np.zeros_like(input_obs_dict[k]) for k in self.camera_keys}, **input_obs_dict)
+            return dict({key_to_flow_key(k) : np.ones_like(input_obs_dict[k]) * 255 for k in self.camera_keys}, **input_obs_dict)
         
         def image_to_tensor(img : np.ndarray):
             torch_img = torch.from_numpy(img.copy())

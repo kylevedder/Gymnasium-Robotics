@@ -17,7 +17,7 @@ MODEL_XML_PATH = os.path.join("fetch", "rotating_pick.xml")
 class FetchRotatingPickEnv(MujocoFetchEnv, EzPickle):
     metadata = {"render_modes": ["rgb_array", "depth_array"], 'render_fps': 50}
     render_mode = "rgb_array"
-    def __init__(self, camera_names=None, reward_type="dense", obj_range=0.07, table_rotation_range=10, include_obj_state=False, n_substeps=20, **kwargs):
+    def __init__(self, camera_names=None, reward_type="dense", obj_range=0.07, table_rotation_range=10, include_obj_state=False, n_substeps=20, downscale_multiplier=1, **kwargs):
         initial_qpos = {
             "robot0:slide0": 0.405,
             "robot0:slide1": 0.48,
@@ -69,6 +69,7 @@ class FetchRotatingPickEnv(MujocoFetchEnv, EzPickle):
 
         self.observation_space = spaces.Dict(_obs_space)
         EzPickle.__init__(self, camera_names=camera_names, image_size=32, reward_type=reward_type, **kwargs)
+        self.flow_wrapper = RAFTWrapper(Path("/RAFT/models/raft-things.pth"), camera_keys=self.camera_names, device=device, downsample_multiplier=downscale_multiplier)
 
     def _sample_goal(self):
         goal = np.array([1.33, 0.75, 0.60])
@@ -107,6 +108,9 @@ class FetchRotatingPickEnv(MujocoFetchEnv, EzPickle):
             for c in self.camera_names:
                 img = self.mujoco_renderer.render(self.render_mode, camera_name=c)
                 obs[c] = img[:,:,None] if self.render_mode == 'depth_array' else img
+
+            # Add the flow images to the obs dict, and downscale if necessary
+            obs = self.flow_wrapper(obs)
 
             touch_left_finger = False
             touch_right_finger = False
@@ -157,6 +161,7 @@ class FetchRotatingPickEnv(MujocoFetchEnv, EzPickle):
             img = np.zeros((self.height, self.width, 3), dtype=np.uint8) if self.render_mode == "rgb_array" \
                 else np.zeros((self.height, self.width, 1), dtype=np.float32)
             obs["achieved_goal"] = obs["observation"] = img
+
         return obs
 
     def step(self, action):
@@ -287,7 +292,7 @@ if __name__ == "__main__":
     else:
         device = "cpu"
 
-    raft_wrapper = RAFTWrapper(Path("/RAFT/models/raft-things.pth"), camera_keys=cam_keys, device=device, downsample_multiplier=4)
+    
 
     import imageio
 
@@ -302,7 +307,8 @@ if __name__ == "__main__":
                                render_mode="rgb_array", 
                                table_rotation_range=velocity_sampler, 
                                width=256, 
-                               height=256, 
+                               height=256,
+                               downscale_multiplier=4,
                                obj_range=0.1, 
                                n_substeps=10)
 
@@ -337,11 +343,9 @@ if __name__ == "__main__":
     imgs = []
     for _ in tqdm.tqdm(range(10)):
         obs,_ = env.reset()
-        raft_wrapper(obs)
         for i in range(10):
             obs, rew, term, trunc, info= env.step(np.array([-0.1,0,-1,-1.0]))
             # obs, *_ = env.step(env.action_space.sample())
-            obs = raft_wrapper(obs)
             full_obs_keys = ['camera_side', 'camera_front', 'gripper_camera_rgb', 'camera_side_flow', 'camera_front_flow', 'gripper_camera_rgb_flow']
             concatenated_obs = np.concatenate([obs[k] for k in full_obs_keys], axis=1)
             imgs.append(concatenated_obs)

@@ -61,6 +61,9 @@ class FetchRotatingPickEnv(MujocoFetchEnv, EzPickle):
                     spaces.Box(
                         0, np.inf, shape=(self.height, self.width, 1), dtype="float32"
                     )
+                
+                # Add the flow images to the obs dict
+                _obs_space[c + "_flow"] = _obs_space[c]
         _obs_space["robot_state"] = spaces.Box(-np.inf, np.inf, shape=(10,), dtype="float32")
         _obs_space["touch"] = spaces.Box(-np.inf, np.inf, shape=(2,), dtype="float32")
         self.include_obj_state = include_obj_state

@@ -19,7 +19,7 @@ class RAFTArgs:
     
 class RAFTWrapper:
 
-    def __init__(self, model_checkpoint : Path, camera_keys : List[str], downsample_multiplier : int = 1, device = 'cuda') -> None:
+    def __init__(self, model_checkpoint : Path, camera_keys : List[str], device = 'cuda') -> None:
         self.model = torch.nn.DataParallel(RAFT(RAFTArgs()))
         self.model.load_state_dict(torch.load(model_checkpoint))
         self.model = self.model.module
@@ -28,20 +28,21 @@ class RAFTWrapper:
         self.prior_obs_dict = None
         self.camera_keys = camera_keys
         self.device = device
-        assert downsample_multiplier in [1, 2, 4, 8, 16, 32, 64, 128, 256]
-        self.downsample_multiplier = downsample_multiplier
+
+    def flow_keys(self) -> List[str]:
+        return [self._key_to_flow_key(k) for k in self.camera_keys]
+
+    def _key_to_flow_key(self, k : str):
+            return k + "_flow"
 
     def __call__(self, input_obs_dict : Dict[str, np.ndarray], reset: bool = False) -> Dict[str, np.ndarray]:
 
         if reset:
             self.prior_obs_dict = None
 
-        def key_to_flow_key(k : str):
-            return k + "_flow"
-
         if self.prior_obs_dict is None:
             self.prior_obs_dict = input_obs_dict
-            return dict({key_to_flow_key(k) : np.ones_like(input_obs_dict[k]) * 255 for k in self.camera_keys}, **input_obs_dict)
+            return dict({self._key_to_flow_key(k) : np.ones_like(input_obs_dict[k]) * 255 for k in self.camera_keys}, **input_obs_dict)
         
         def image_to_tensor(img : np.ndarray):
             torch_img = torch.from_numpy(img.copy())
@@ -66,20 +67,10 @@ class RAFTWrapper:
             flow_up_img = flow_viz.flow_to_image(flow_up_img)
             return flow_up_img
         
-        def downscale_image(img):
-            return cv2.resize(img, (img.shape[1] // self.downsample_multiplier, img.shape[0] // self.downsample_multiplier))
-
         # Make result dict a copy of the input dict
         result_dict = copy.deepcopy(input_obs_dict)
         # Add flow keys to result dict
-        result_dict.update({key_to_flow_key(k) : process_key(k) for k in self.camera_keys})
+        result_dict.update({self._key_to_flow_key(k) : process_key(k) for k in self.camera_keys})
 
         self.prior_obs_dict = input_obs_dict
-
-        # Downsample result dict images and their associated flow keys
-        for k in self.camera_keys:
-            result_dict[k] = downscale_image(result_dict[k])
-            flow_k = key_to_flow_key(k)
-            result_dict[flow_k] = downscale_image(result_dict[flow_k])
-
         return result_dict

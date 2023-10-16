@@ -8,6 +8,7 @@ from gymnasium.utils.ezpickle import EzPickle
 
 from gymnasium_robotics.envs.fetch import MujocoFetchEnv, goal_distance
 from gymnasium_robotics.utils.flow import RAFTWrapper
+from gymnasium_robotics.utils.resizer import Resizer
 from pathlib import Path
 
 # Ensure we get the path separator correct on windows
@@ -17,7 +18,18 @@ MODEL_XML_PATH = os.path.join("fetch", "rotating_pick.xml")
 class FetchRotatingPickEnv(MujocoFetchEnv, EzPickle):
     metadata = {"render_modes": ["rgb_array", "depth_array"], 'render_fps': 50}
     render_mode = "rgb_array"
-    def __init__(self, camera_names=None, reward_type="dense", obj_range=0.07, table_rotation_range=10, include_obj_state=False, n_substeps=20, downscale_multiplier=1, **kwargs):
+    def __init__(self, width=32, height=32, camera_names=None, reward_type="dense", obj_range=0.07, table_rotation_range=10, include_obj_state=False, n_substeps=20, downscale_multiplier=1, **kwargs):
+        self.width = width
+        self.height = height
+        self.scaled_width = self.width // downscale_multiplier
+        self.scaled_height = self.height // downscale_multiplier
+
+        assert int(self.scaled_width) == self.scaled_width, f"width {self.scaled_width} is not an integer"
+        assert int(self.scaled_height) == self.scaled_height, f"height {self.scaled_height} is not an integer"
+
+        self.scaled_width = int(self.scaled_width)
+        self.scaled_height = int(self.scaled_height)
+
         initial_qpos = {
             "robot0:slide0": 0.405,
             "robot0:slide1": 0.48,
@@ -34,6 +46,8 @@ class FetchRotatingPickEnv(MujocoFetchEnv, EzPickle):
         self.initial_qpos = initial_qpos
         MujocoFetchEnv.__init__(
             self,
+            width=width,
+            height=height,
             model_path=MODEL_XML_PATH,
             has_object=True,
             block_gripper=False,
@@ -51,19 +65,27 @@ class FetchRotatingPickEnv(MujocoFetchEnv, EzPickle):
         self.cube_body_id = self._mujoco.mj_name2id(
             self.model, self._mujoco.mjtObj.mjOBJ_BODY, "object0"
         )
+
         # consists of images and proprioception.
         _obs_space = {}
         if isinstance(camera_names, list) and len(camera_names) > 0:
             for c in camera_names:
-                _obs_space[c] = spaces.Box(
-                        0, 255, shape=(self.height, self.width, 3), dtype="uint8"
+                camera_name = c
+                camera_name_flow = c + "_flow"
+                _obs_space[camera_name] = spaces.Box(
+                        0, 255, shape=(self.scaled_height, self.scaled_width, 3), dtype="uint8"
                     ) if self.render_mode == "rgb_array" else \
                     spaces.Box(
-                        0, np.inf, shape=(self.height, self.width, 1), dtype="float32"
+                        0, np.inf, shape=(self.scaled_height, self.scaled_width, 1), dtype="float32"
                     )
                 
                 # Add the flow images to the obs dict
-                _obs_space[c + "_flow"] = _obs_space[c]
+                _obs_space[camera_name_flow] = _obs_space[c]
+
+                print(f"obs space key: {camera_name}, shape: {_obs_space[camera_name].shape}")
+                print(f"obs space key: {camera_name_flow}, shape: {_obs_space[camera_name_flow].shape}")
+
+
         _obs_space["robot_state"] = spaces.Box(-np.inf, np.inf, shape=(10,), dtype="float32")
         _obs_space["touch"] = spaces.Box(-np.inf, np.inf, shape=(2,), dtype="float32")
         self.include_obj_state = include_obj_state
@@ -71,8 +93,13 @@ class FetchRotatingPickEnv(MujocoFetchEnv, EzPickle):
             _obs_space["obj_state"] = spaces.Box(-np.inf, np.inf, shape=(3,), dtype="float32")
 
         self.observation_space = spaces.Dict(_obs_space)
-        EzPickle.__init__(self, camera_names=camera_names, image_size=32, reward_type=reward_type, **kwargs)
-        self.flow_wrapper = RAFTWrapper(Path("/RAFT/models/raft-things.pth"), camera_keys=self.camera_names, device=device, downsample_multiplier=downscale_multiplier)
+        assert self.scaled_width == self.scaled_height, f"width and height must be equal, got {self.scaled_width} and {self.scaled_height}"
+        EzPickle.__init__(self, camera_names=camera_names, image_size=self.scaled_width, reward_type=reward_type, **kwargs)
+        self.flow_wrapper = RAFTWrapper(Path("/RAFT/models/raft-things.pth"), 
+                                        camera_keys=self.camera_names)
+        # camera names with flow images. these are any keys with a camera name in them.
+        camera_and_flow_names = self.camera_names + self.flow_wrapper.flow_keys()
+        self.resize_wrapper = Resizer(resize_scale=downscale_multiplier, keys_to_modify=camera_and_flow_names)
 
     def _sample_goal(self):
         goal = np.array([1.33, 0.75, 0.60])
@@ -114,6 +141,7 @@ class FetchRotatingPickEnv(MujocoFetchEnv, EzPickle):
 
             # Add the flow images to the obs dict, and downscale if necessary
             obs = self.flow_wrapper(obs, reset=reset)
+            obs = self.resize_wrapper(obs)
 
             touch_left_finger = False
             touch_right_finger = False
@@ -161,8 +189,8 @@ class FetchRotatingPickEnv(MujocoFetchEnv, EzPickle):
             # BaseRobotEnv has called _get_obs to determine observation space dims but mujoco renderer has not been initialized yet.
             # in this case, return an obs dict with arbitrary values for each ey
             # since observation space will be overwritten later.
-            img = np.zeros((self.height, self.width, 3), dtype=np.uint8) if self.render_mode == "rgb_array" \
-                else np.zeros((self.height, self.width, 1), dtype=np.float32)
+            img = np.zeros((self.scaled_height, self.scaled_width, 3), dtype=np.uint8) if self.render_mode == "rgb_array" \
+                else np.zeros((self.scaled_height, self.scaled_width, 1), dtype=np.float32)
             obs["achieved_goal"] = obs["observation"] = img
 
         return obs

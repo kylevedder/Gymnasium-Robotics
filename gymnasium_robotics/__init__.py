@@ -1647,6 +1647,44 @@ def register_robotics_envs():
                 },
             )
 
+    # ------ 32x32 Fixed/Gripper Camera -> 2D Rotating Pick ------
+    for observation_mode in ["FO", "PO"]:
+        for difficulty in [0.07, 0.15]:
+            register(
+                id=f"{observation_mode}32pxFixedGripper2DRotating{int(difficulty*100)}cmPick-v0",
+                entry_point="gymnasium_robotics.envs.fetch.rotating_pick:FetchRotatingPickEnv",
+                max_episode_steps=100,
+                disable_env_checker=True,
+                kwargs={
+                    "camera_names": ["camera_front", "camera_side", "gripper_camera_rgb"] if "FO" in observation_mode else None,
+                    "width": 256, # Render at 256 for flow estimation
+                    "height": 256, # Render at 256 for flow estimation
+                    "downscale_multiplier": 8, # Downscale by 8x to get to 32x32
+                    "render_mode": "rgb_array",
+                    "obj_range": difficulty,
+                    "n_substeps" : 10,
+                },
+            )
+
+    # ------ 256x256 Fixed/Gripper Camera -> 2D Rotating Pick ------
+    for observation_mode in ["FO", "PO"]:
+        for difficulty in [0.07, 0.15]:
+            register(
+                id=f"{observation_mode}256pxFixedGripper2DRotating{int(difficulty*100)}cmPick-v0",
+                entry_point="gymnasium_robotics.envs.fetch.rotating_pick:FetchRotatingPickEnv",
+                max_episode_steps=100,
+                disable_env_checker=True,
+                kwargs={
+                    "camera_names": ["camera_front", "camera_side", "gripper_camera_rgb"] if "FO" in observation_mode else None,
+                    "width": 256, # Render at 256 for flow estimation
+                    "height": 256, # Render at 256 for flow estimation
+                    "downscale_multiplier": 1, # Don't downscale
+                    "render_mode": "rgb_array",
+                    "obj_range": difficulty,
+                    "n_substeps" : 10,
+                },
+            )
+
     for observation_mode in ["FO", "PO"]:
         for reward_mode in ["MultiImage", "SingleImage"]:
             for difficulty in [0.07]:

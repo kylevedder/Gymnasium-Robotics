@@ -95,11 +95,11 @@ class FetchRotatingPickEnv(MujocoFetchEnv, EzPickle):
         self.observation_space = spaces.Dict(_obs_space)
         assert self.scaled_width == self.scaled_height, f"width and height must be equal, got {self.scaled_width} and {self.scaled_height}"
         EzPickle.__init__(self, camera_names=camera_names, image_size=self.scaled_width, reward_type=reward_type, **kwargs)
-        self.flow_wrapper = RAFTWrapper(Path("/RAFT/models/raft-things.pth"), 
+        self.flow_estimator = RAFTWrapper(Path("/RAFT/models/raft-things.pth"), 
                                         camera_keys=self.camera_names)
         # camera names with flow images. these are any keys with a camera name in them.
-        camera_and_flow_names = self.camera_names + self.flow_wrapper.flow_keys()
-        self.resize_wrapper = Resizer(resize_scale=downscale_multiplier, keys_to_modify=camera_and_flow_names)
+        camera_and_flow_names = self.camera_names + self.flow_estimator.flow_keys()
+        self.resizer = Resizer(resize_scale=downscale_multiplier, keys_to_modify=camera_and_flow_names)
 
     def _sample_goal(self):
         goal = np.array([1.33, 0.75, 0.60])
@@ -140,8 +140,8 @@ class FetchRotatingPickEnv(MujocoFetchEnv, EzPickle):
                 obs[c] = img[:,:,None] if self.render_mode == 'depth_array' else img
 
             # Add the flow images to the obs dict, and downscale if necessary
-            obs = self.flow_wrapper(obs, reset=reset)
-            obs = self.resize_wrapper(obs)
+            obs = self.flow_estimator(obs, reset=reset)
+            obs = self.resizer(obs)
 
             touch_left_finger = False
             touch_right_finger = False

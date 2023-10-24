@@ -1656,7 +1656,7 @@ def register_robotics_envs():
                 max_episode_steps=100,
                 disable_env_checker=True,
                 kwargs={
-                    "camera_names": ["camera_front", "camera_side", "gripper_camera_rgb"] if "FO" in observation_mode else None,
+                    "camera_names": ["camera_front", "camera_side"] if "FO" in observation_mode else None,
                     "width": 256, # Render at 256 for flow estimation
                     "height": 256, # Render at 256 for flow estimation
                     "downscale_multiplier": 8, # Downscale by 8x to get to 32x32
@@ -1675,7 +1675,7 @@ def register_robotics_envs():
                 max_episode_steps=100,
                 disable_env_checker=True,
                 kwargs={
-                    "camera_names": ["camera_front", "camera_side", "gripper_camera_rgb"] if "FO" in observation_mode else None,
+                    "camera_names": ["camera_front", "camera_side"] if "FO" in observation_mode else None,
                     "width": 256, # Render at 256 for flow estimation
                     "height": 256, # Render at 256 for flow estimation
                     "downscale_multiplier": 1, # Don't downscale

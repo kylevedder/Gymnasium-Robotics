@@ -18,7 +18,7 @@ MODEL_XML_PATH = os.path.join("fetch", "rotating_pick.xml")
 class FetchRotatingPickEnv(MujocoFetchEnv, EzPickle):
     metadata = {"render_modes": ["rgb_array", "depth_array"], 'render_fps': 50}
     render_mode = "rgb_array"
-    def __init__(self, width=32, height=32, camera_names=None, reward_type="dense", obj_range=0.07, table_rotation_range=10, include_obj_state=False, n_substeps=20, downscale_multiplier=1, **kwargs):
+    def __init__(self, width=32, height=32, camera_names=None, reward_type="dense", obj_range=0.07, table_rotation_range=lambda rng: ((5 + rng.uniform(0, 10)) * rng.choice([-1, 1])), include_obj_state=False, n_substeps=20, downscale_multiplier=1, **kwargs):
         self.width = width
         self.height = height
         self.scaled_width = self.width // downscale_multiplier
@@ -328,10 +328,7 @@ if __name__ == "__main__":
     import imageio
 
     def velocity_sampler(rng):
-        value = rng.uniform(-10, 10)
-        value_sign = np.sign(value)
-
-        return value + value_sign * 10
+        return ((10 + rng.uniform(0, 10)) * rng.choice([-1, 1]))
 
     # cam_keys = ["camera_front", "camera_front_2"]
     env = FetchRotatingPickEnv(cam_keys, "dense", 
